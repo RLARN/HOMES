@@ -101,6 +101,46 @@
           </div>
         </div>
       </div>
+      <!-- Photo Gallery -->
+      <div class="card homes-card mt-3 mb-4">
+        <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="fw-semibold">가족 앨범</div>
+            <a class="small text-decoration-none" href="#">전체보기</a>
+          </div>
+        </div>
+
+        <div class="card-body pt-2 px-3 px-md-4">
+          <div class="row g-3 homes-gallery">
+            <div class="col-6 col-md-3">
+              <a href="/main/1.jpg" class="homes-gallery-item" target="_blank">
+                <img src="/main/1.jpg" alt="gallery-1">
+              </a>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <a href="/main/2.jpg" class="homes-gallery-item" target="_blank">
+                <img src="/main/2.jpg" alt="gallery-2">
+              </a>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <a href="/main/3.jpg" class="homes-gallery-item" target="_blank">
+                <img src="/main/3.jpg" alt="gallery-3">
+              </a>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <a href="/main/4.jpg" class="homes-gallery-item" target="_blank">
+                <img src="/main/4.jpg" alt="gallery-4">
+              </a>
+            </div>
+          </div>
+          <div class="small text-muted mt-3">
+            최근 사진 4장을 미리보기로 보여줘요. (추후 업로드/앨범 기능으로 확장 가능)
+          </div>
+        </div>
+      </div>
 
       <!-- Content rows -->
       <div class="row g-3">
@@ -168,9 +208,35 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- ✅ style은 main.jsp에 그대로 둔다 -->
   <style>
-	
+    <%--갤러리 css--%>
+    .homes-gallery-item{
+      display:block;
+      border-radius: 16px;
+      overflow:hidden;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 6px 18px rgba(0,0,0,.08);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .homes-gallery-item img{
+      width:100%;
+      height:140px;
+      object-fit: cover;
+      display:block;
+      filter: saturate(1.02);
+    }
+    @media (min-width: 768px){
+      .homes-gallery-item img{ height: 150px; }
+    }
+    @media (min-width: 1200px){
+      .homes-gallery-item img{ height: 250px; }
+    }
+    .homes-gallery-item:hover{
+      transform: translateY(-2px);
+      border-color: rgba(255,255,255,.18);
+      box-shadow: 0 10px 24px rgba(0,0,0,.14);
+    }
   </style>
 </body>
 </html>

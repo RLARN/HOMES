@@ -38,9 +38,10 @@
 	========================= */
 	* { box-sizing: border-box; }
 	html, body {
-		overflow-y: hidden;,/* 이거땜에 모바일에서 푸터 고정안됨 */
+        /*overflow-y: hidden;,/* 이거땜에 모바일에서 푸터 고정안됨 */
+
 		 height: 100%;
-	 
+
 	  }
 	body { font-family: "Pretendard", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
 	.homes-bg { background: #f6f8fb; }
@@ -103,8 +104,24 @@
 	.homes-quick-btn-outline { border-radius: 16px; border-color: rgba(255,255,255,.55); color: #fff; }
 	.homes-quick-btn-outline:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.70); color: #fff; }
 
-	/* ✅ PC에서 사이드바: 헤더(워크스페이스/검색) 위 고정 + 아래 메뉴만 스크롤 */
+    /* 모바일 */
+    @media (max-width: 991.98px) {
+        html, body {
+            overflow-y: auto;
+        }
+        /*일단 푸터 숨김*/
+        footer {
+            display: none !important;
+        }
+    }
+
+
+    /* ✅ PC에서 사이드바: 헤더(워크스페이스/검색) 위 고정 + 아래 메뉴만 스크롤 */
 	@media (min-width: 992px) {
+        html, body {
+            overflow-y: auto;
+            /*스크롤 풀기*/
+        }
 	  #homesSidebar.offcanvas-lg{
 	    position: sticky;
 	    top: 56px; /* header.jsp topbar 높이(기본 56px). 다르면 숫자만 바꿔 */

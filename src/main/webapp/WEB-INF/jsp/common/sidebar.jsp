@@ -29,20 +29,21 @@
         <a class="list-group-item list-group-item-action" href="#">📁 DMS (증명서)</a>
         <a class="list-group-item list-group-item-action" href="#">🗓️ 일정 (캘린더)</a>
         <a class="list-group-item list-group-item-action" href="#">📝 공유메모</a>
-        <a class="list-group-item list-group-item-action" href="#">📷 가족 SNS</a>
-        <a class="list-group-item list-group-item-action" href="#">🤖 AI</a>
+        <a class="list-group-item list-group-item-action" href="#">📷 가족 앨범(SNS)</a>
+        <a class="list-group-item list-group-item-action" href="#">🤖 ^Assistant</a>
         <a class="list-group-item list-group-item-action" href="#">🔎 통합검색</a>
       </div>
 
       <div class="homes-nav-title mt-4">QUICK</div>
       <div class="d-grid gap-2">
         <button class="btn btn-light homes-quick-btn" type="button">+ 구매요청</button>
-        <button class="btn btn-outline-light homes-quick-btn-outline" 		        type="button"
+        <button class="btn btn-outline-light homes-quick-btn-outline" type="button"
 		        onclick="location.href='${pageContext.request.contextPath}/scm/deposit/depositRequest'">
 		  + 입금요청
 		</button>
       </div>
       <div class="small text-white-50 mt-4">Power by eksystems</div>
+      <%--<div class="small text-white-50 mt-4">© 2026 eksystems. All rights reserved.</div>--%>
     </div>
   </div>
 </div>
