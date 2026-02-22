@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.scm.mapper.ScmMapper">
+
+  <insert id="insertDepositRequest"
+          parameterType="com.eksystems.homes.scm.vo.ScmVO"
+          useGeneratedKeys="true"
+          keyProperty="depReqSeq">
+
+    INSERT INTO SCM_DEPOSIT_REQUEST_LIST
+    (
+      FAMILY_ID,
+      PUR_ITEM_SEQ,
+      STORE_INFO,
+      AMOUNT,
+      REQ_DESC,
+      REG_ID
+    )
+    VALUES
+    (
+      #{familyId},
+      #{purItemSeq},
+      #{storeInfo},
+      #{amount},
+      #{reqDesc},
+      #{regId}
+    )
+
+  </insert>
+
+<select id="selectDepositRequestList"
+        parameterType="map"
+        resultType="com.eksystems.homes.scm.vo.ScmVO">
+  SELECT
+    DEP_REQ_SEQ   AS depReqSeq,
+    FAMILY_ID     AS familyId,
+    PUR_ITEM_SEQ  AS purItemSeq,
+    STORE_INFO    AS storeInfo,
+    AMOUNT        AS amount,
+    REQ_STATUS    AS reqStatus,
+    REQ_DESC      AS reqDesc,
+    REG_ID        AS regId,
+    REG_DT        AS requestDt,
+    UPD_ID        AS updId,
+    UPD_DT        AS updDt
+  FROM SCM_DEPOSIT_REQUEST_LIST
+  WHERE FAMILY_ID = #{familyId}
+
+  <!-- ✅ regId가 있을 때만 조건 추가 -->
+  <if test="regId != null and regId != ''">
+    AND REG_ID = #{regId}
+  </if>
+
+  ORDER BY REG_DT DESC, DEP_REQ_SEQ DESC
+</select>
+
+<select id="selectDepositRequestDetail"
+        resultType="com.eksystems.homes.scm.vo.ScmVO">
+  SELECT
+    DEP_REQ_SEQ   AS depReqSeq,
+    FAMILY_ID     AS familyId,
+    PUR_ITEM_SEQ  AS purItemSeq,
+    STORE_INFO    AS storeInfo,
+    AMOUNT        AS amount,
+    REQ_DESC      AS reqDesc,
+    REQ_STATUS    AS reqStatus,
+    REG_ID        AS regId,
+    REG_DT        AS regDt
+  FROM SCM_DEPOSIT_REQUEST_LIST
+  WHERE FAMILY_ID = #{familyId}
+    AND DEP_REQ_SEQ = #{depReqSeq}
+</select>
+
+</mapper>

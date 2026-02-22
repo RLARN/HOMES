@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.login.mapper.LoginMapper">
+
+    <resultMap id="LoginMap" type="com.eksystems.homes.login.vo.LoginVO">
+        <result property="familyId" column="FAMILY_ID"/>
+        <result property="userId"   column="USER_ID"/>
+        <result property="userNm"   column="USER_NM"/>
+        <result property="userPwd" column="USER_PWD"/>
+	  <result property="userAuth" column="USER_AUTH"/> <!-- ⭐ 이 줄 -->
+	  <result property="useYn"    column="USE_YN"/>
+    </resultMap>
+
+    <!-- 로그인 사용자 조회 -->
+    <select id="selectLoginUser" resultMap="LoginMap">
+        SELECT
+            FAMILY_ID,
+            USER_ID,
+            USER_NM,
+            USER_PWD,
+            USER_AUTH,
+            USE_YN
+        FROM USER_MST
+        WHERE FAMILY_ID = #{familyId}
+          AND USER_ID   = #{userId}
+          AND USER_PWD  = #{userPwd}
+    </select>
+
+    <!-- 마지막 로그인 시간 업데이트 -->
+    <update id="updateLastLogin">
+        UPDATE USER_MST
+           SET LAST_LOGIN_DT = CURRENT_TIMESTAMP
+         WHERE FAMILY_ID = #{familyId}
+           AND USER_ID   = #{userId}
+    </update>
+
+</mapper>
