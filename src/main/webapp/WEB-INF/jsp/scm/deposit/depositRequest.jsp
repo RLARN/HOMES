@@ -147,6 +147,7 @@
                         <th style="width: 90px;" class="text-center text-nowrap">상세</th>
 						<c:if test="${sessionScope.LoginVO.userAuth eq 'manager'}">
  							<th style="width: 90px;" class="text-center text-nowrap">결재</th>
+ 							<th style="width: 70px;" class="text-center text-nowrap">삭제</th>
 						</c:if>
                       </tr>
                     </thead>
@@ -205,7 +206,7 @@
 							      보기
 							    </button>
 							  </td>
-							  <!-- 결재 버튼 (MANAGER만) -->
+							  <!-- 결재/삭제 버튼 (MANAGER만) -->
 							  <c:if test="${sessionScope.LoginVO.userAuth eq 'manager'}">
 							  <td class="text-center text-nowrap">
 							    <button type="button"
@@ -213,6 +214,14 @@
 							            data-dep-req-seq="${row.depReqSeq}"
 							            onclick="approveDeposit(this)">
 							      결재
+							    </button>
+							  </td>
+							  <td class="text-center text-nowrap">
+							    <button type="button"
+							            class="btn btn-sm btn-outline-danger homes-pill"
+							            data-dep-req-seq="${row.depReqSeq}"
+							            onclick="deleteDeposit(this)">
+							      삭제
 							    </button>
 							  </td>
 							  </c:if>
@@ -242,6 +251,58 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+  let _approveSeq = null;
+
+  function approveDeposit(btn) {
+    _approveSeq = btn.getAttribute('data-dep-req-seq');
+    document.getElementById('ap_seq').textContent = '#' + _approveSeq;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('approveModal')).show();
+  }
+
+  async function deleteDeposit(btn) {
+    if (!confirm('삭제하면 복구할 수 없습니다. 삭제하시겠습니까?')) return;
+    const seq = btn.getAttribute('data-dep-req-seq');
+    try {
+      const res = await fetch(HOMES.ctx + '/scm/deposit/depositRequest/deleteAjax', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+        body: new URLSearchParams({ depReqSeq: seq })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (HOMES.toast) HOMES.toast('삭제되었습니다.', 'success');
+        setTimeout(() => location.reload(), 800);
+      } else {
+        if (HOMES.toast) HOMES.toast(data.message || '삭제 실패', 'danger');
+      }
+    } catch (e) {
+      if (HOMES.toast) HOMES.toast('오류: ' + e.message, 'danger');
+    }
+  }
+
+  async function submitApprove(status) {
+    bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide();
+    try {
+      const res = await fetch(HOMES.ctx + '/scm/deposit/depositRequest/approveAjax', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+        body: new URLSearchParams({ depReqSeq: _approveSeq, reqStatus: status })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const label = { APPROVED: '결재완료', REJECT: '반려', STANDBY: '대기' }[status] || status;
+        if (HOMES.toast) HOMES.toast(label + ' 처리되었습니다.', 'success');
+        setTimeout(() => location.reload(), 800);
+      } else {
+        if (HOMES.toast) HOMES.toast(data.message || '처리 실패', 'danger');
+      }
+    } catch (e) {
+      if (HOMES.toast) HOMES.toast('오류: ' + e.message, 'danger');
+    }
+  }
+  </script>
 
   <script>
   /**
@@ -287,8 +348,7 @@
 
   <script>
   /**
-   * [폼] Bootstrap 5 Validation 활성화
-   * - needs-validation + was-validated 패턴 (공식 방식)
+   * [폼] AJAX 상신 + Bootstrap 5 Validation
    */
   (function () {
     'use strict';
@@ -296,13 +356,46 @@
     const form = document.getElementById('depositForm');
     if (!form) return;
 
-    form.addEventListener('submit', function (event) {
-      // AJAX로 가로채기 때문에 여기서는 "검증 UI"만 담당
-      if (!form.checkValidity()) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      event.stopPropagation();
       form.classList.add('was-validated');
+
+      if (!form.checkValidity()) return;
+
+      const submitBtn = form.querySelector('[type=submit]');
+      const origText  = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '처리 중...';
+
+      try {
+        const res = await fetch(HOMES.ctx + '/scm/deposit/depositRequest/saveAjax', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+          body:    new URLSearchParams({
+            storeInfo: form.storeInfo.value,
+            amount:    HOMES.amountOnlyDigits(),
+            reqDesc:   form.reqDesc.value
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          if (HOMES.toast) HOMES.toast(data.message || '상신되었습니다.', 'success');
+          form.reset();
+          form.classList.remove('was-validated');
+          // 목록 새로고침
+          setTimeout(() => location.reload(), 800);
+        } else {
+          if (HOMES.toast) HOMES.toast(data.message || '저장에 실패했습니다.', 'danger');
+        }
+      } catch (e) {
+        if (HOMES.toast) HOMES.toast('네트워크 오류: ' + e.message, 'danger');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = origText;
+      }
     }, false);
   })();
   </script>
@@ -539,6 +632,27 @@
     </div>
   </div>
   
+  <!-- 결재 모달 -->
+  <div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:18px;">
+        <div class="modal-header">
+          <h5 class="modal-title">결재</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-1 text-muted small">요청번호 <span id="ap_seq" class="fw-semibold text-dark"></span></p>
+          <p class="mb-0">처리 방법을 선택하세요.</p>
+        </div>
+        <div class="modal-footer gap-2">
+          <button type="button" class="btn btn-success homes-pill px-4" onclick="submitApprove('APPROVED')">결재완료</button>
+          <button type="button" class="btn btn-danger  homes-pill px-4" onclick="submitApprove('REJECT')">반려</button>
+          <button type="button" class="btn btn-secondary homes-pill px-4" onclick="submitApprove('STANDBY')">대기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 입금요청 상세 모달 -->
   <div class="modal fade" id="depositDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">

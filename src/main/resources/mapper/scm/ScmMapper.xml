@@ -71,4 +71,21 @@
     AND DEP_REQ_SEQ = #{depReqSeq}
 </select>
 
+
+<update id="updateDepositStatus">
+  UPDATE SCM_DEPOSIT_REQUEST_MST
+  SET REQ_STATUS = #{reqStatus},
+      UPD_ID     = #{updId},
+      UPD_DT     = NOW()
+  WHERE FAMILY_ID   = #{familyId}
+    AND DEP_REQ_SEQ = #{depReqSeq}
+</update>
+
+
+<delete id="deleteDepositRequest">
+  DELETE FROM SCM_DEPOSIT_REQUEST_MST
+  WHERE FAMILY_ID   = #{familyId}
+    AND DEP_REQ_SEQ = #{depReqSeq}
+</delete>
+
 </mapper>

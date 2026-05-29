@@ -100,6 +100,57 @@ public class ScmController {
         }
     }
 
+    @PostMapping("/deposit/depositRequest/approveAjax")
+    @ResponseBody
+    public Map<String, Object> approveAjax(
+            @RequestParam("depReqSeq") Long depReqSeq,
+            @RequestParam("reqStatus") String reqStatus,
+            HttpSession session) {
+
+        Map<String, Object> res = new HashMap<>();
+        LoginVO loginUser = (LoginVO) session.getAttribute("LoginVO");
+
+        if (loginUser == null) {
+            res.put("success", false); res.put("message", "세션 만료");
+            return res;
+        }
+        if (!"manager".equals(loginUser.getUserAuth())) {
+            res.put("success", false); res.put("message", "권한 없음");
+            return res;
+        }
+        if (!java.util.List.of("APPROVED", "REJECT", "STANDBY").contains(reqStatus)) {
+            res.put("success", false); res.put("message", "잘못된 상태값");
+            return res;
+        }
+
+        scmService.updateDepositStatus(loginUser.getFamilyId(), depReqSeq, reqStatus, loginUser.getUserId());
+        res.put("success", true);
+        return res;
+    }
+
+    @PostMapping("/deposit/depositRequest/deleteAjax")
+    @ResponseBody
+    public Map<String, Object> deleteAjax(
+            @RequestParam("depReqSeq") Long depReqSeq,
+            HttpSession session) {
+
+        Map<String, Object> res = new HashMap<>();
+        LoginVO loginUser = (LoginVO) session.getAttribute("LoginVO");
+
+        if (loginUser == null) {
+            res.put("success", false); res.put("message", "세션 만료");
+            return res;
+        }
+        if (!"manager".equals(loginUser.getUserAuth())) {
+            res.put("success", false); res.put("message", "권한 없음");
+            return res;
+        }
+
+        scmService.deleteDepositRequest(loginUser.getFamilyId(), depReqSeq);
+        res.put("success", true);
+        return res;
+    }
+
     @ResponseBody
     @GetMapping("/deposit/depositRequest/detailJson")
     public Map<String, Object> detailJson(@RequestParam("id") Long depReqSeq, HttpSession session) {

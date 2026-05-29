@@ -19,8 +19,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/logout",
                         "/error", "/error/**",
                         "/css/**", "/js/**", "/assets/**",
-                        "/img/**",          // ✅ 추가 (인터셉터 제외)
-                        "/favicon.ico"
+                        "/img/**",
+                        "/favicon.ico",
+                        "/sw.js",           // Service Worker (인증 불필요)
+                        "/manifest.json"    // PWA manifest (인증 불필요)
                 );
     }
     // ✅ 이거 추가

@@ -15,6 +15,17 @@
     </a>
 
     <div class="ms-auto d-flex align-items-center gap-2">
+
+      <!-- 알림 구독 버튼 -->
+      <button id="pushBellBtn"
+              class="btn btn-sm btn-outline-light homes-pill"
+              type="button"
+              title="알림 설정"
+              onclick="HOMES_PUSH.toggleSubscription(this)"
+              style="font-size:16px; min-width:38px;display: none">
+        🔔
+      </button>
+
       <div class="dropdown">
 		<button class="btn btn-sm btn-light homes-pill dropdown-toggle"
 		        type="button"
@@ -191,3 +202,99 @@
 	}
 	.homes-quote { font-size: 16px; font-weight: 800; color: #111827; }
 </style>
+
+<script>
+/**
+ * Web Push 구독/해제 관리
+ */
+window.HOMES_PUSH = (function () {
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw     = window.atob(base64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  }
+
+  async function getSubscription() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+    const reg = await navigator.serviceWorker.ready;
+    return reg.pushManager.getSubscription();
+  }
+
+  async function updateBellUI(btn) {
+    if (!btn) return;
+    const sub = await getSubscription();
+    if (sub) {
+      btn.textContent = '🔔';
+      btn.title = '알림 구독 중 (클릭: 해제)';
+      btn.classList.remove('btn-outline-light');
+      btn.classList.add('btn-light');
+    } else {
+      btn.textContent = '🔕';
+      btn.title = '알림 구독하기';
+      btn.classList.remove('btn-light');
+      btn.classList.add('btn-outline-light');
+    }
+  }
+
+  async function subscribe() {
+    const reg     = await navigator.serviceWorker.ready;
+    const vapidKey = window.HOMES_VAPID_PUBLIC_KEY;
+    if (!vapidKey) { alert('VAPID 키가 없습니다. 서버를 확인하세요.'); return; }
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey)
+    });
+
+    const json = sub.toJSON();
+    await fetch('/push/subscribe', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body:    JSON.stringify({ endpoint: json.endpoint, keys: json.keys })
+    });
+  }
+
+  async function unsubscribe() {
+    const sub = await getSubscription();
+    if (sub) await sub.unsubscribe();
+    await fetch('/push/unsubscribe', {
+      method:  'DELETE',
+      headers: { 'Accept': 'application/json' }
+    });
+  }
+
+  async function toggleSubscription(btn) {
+    if (!('Notification' in window)) {
+      alert('이 브라우저는 알림을 지원하지 않습니다.');
+      return;
+    }
+
+    try {
+      const existing = await getSubscription();
+      if (existing) {
+        await unsubscribe();
+      } else {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          alert('알림 권한이 거부되었습니다.\n브라우저 설정에서 허용해 주세요.');
+          return;
+        }
+        await subscribe();
+      }
+      updateBellUI(btn);
+    } catch (e) {
+      console.error('[PUSH]', e);
+      alert('알림 설정 중 오류가 발생했습니다: ' + e.message);
+    }
+  }
+
+  // 페이지 로드 시 벨 아이콘 상태 초기화
+  document.addEventListener('DOMContentLoaded', function () {
+    updateBellUI(document.getElementById('pushBellBtn'));
+  });
+
+  return { toggleSubscription };
+})();
+</script>

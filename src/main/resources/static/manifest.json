@@ -1,0 +1,16 @@
+{
+  "name": "^HOMES",
+  "short_name": "HOMES",
+  "description": "Home Organization & Management for Enhanced Synergy",
+  "start_url": "/main",
+  "display": "standalone",
+  "theme_color": "#1e3a8a",
+  "background_color": "#f6f8fb",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.push.mapper.PushMapper">
+
+  <insert id="upsertSubscription" parameterType="com.eksystems.homes.push.vo.PushSubscriptionVO">
+    INSERT INTO PUSH_SUBSCRIPTION (FAMILY_ID, USER_ID, USER_AUTH, ENDPOINT, P256DH, AUTH_KEY)
+    VALUES (#{familyId}, #{userId}, #{userAuth}, #{endpoint}, #{p256dh}, #{auth})
+    ON DUPLICATE KEY UPDATE
+      USER_AUTH = #{userAuth},
+      ENDPOINT  = #{endpoint},
+      P256DH    = #{p256dh},
+      AUTH_KEY  = #{auth},
+      UPD_DT    = NOW()
+  </insert>
+
+  <delete id="deleteSubscription">
+    DELETE FROM PUSH_SUBSCRIPTION
+    WHERE FAMILY_ID = #{familyId}
+      AND USER_ID   = #{userId}
+  </delete>
+
+  <select id="selectManagerSubscriptions" resultType="com.eksystems.homes.push.vo.PushSubscriptionVO">
+    SELECT
+      ENDPOINT  AS endpoint,
+      P256DH    AS p256dh,
+      AUTH_KEY  AS auth
+    FROM PUSH_SUBSCRIPTION
+    WHERE FAMILY_ID = #{familyId}
+      AND USER_AUTH = 'manager'
+  </select>
+
+</mapper>

@@ -15,4 +15,12 @@ public interface ScmMapper {
 	ScmVO selectDepositRequestDetail(@Param("familyId") String familyId,
             @Param("depReqSeq") Long depReqSeq);
 
+	int updateDepositStatus(@Param("familyId") String familyId,
+	                        @Param("depReqSeq") Long depReqSeq,
+	                        @Param("reqStatus") String reqStatus,
+	                        @Param("updId") String updId);
+
+	int deleteDepositRequest(@Param("familyId") String familyId,
+	                         @Param("depReqSeq") Long depReqSeq);
+
 }

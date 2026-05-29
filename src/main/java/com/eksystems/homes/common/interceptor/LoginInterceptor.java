@@ -23,7 +23,9 @@ public class LoginInterceptor implements HandlerInterceptor {
         if (uri.startsWith(ctx + "/css")
                 || uri.startsWith(ctx + "/js")
                 || uri.startsWith(ctx + "/assets")
-                || uri.equals(ctx + "/favicon.ico")) {
+                || uri.equals(ctx + "/favicon.ico")
+                || uri.equals(ctx + "/sw.js")
+                || uri.equals(ctx + "/manifest.json")) {
             return true;
         }
 

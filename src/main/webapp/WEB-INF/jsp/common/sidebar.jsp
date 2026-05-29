@@ -24,19 +24,25 @@
     <div class="p-3 pt-2 homes-sidebar-content">
       <div class="homes-nav-title">MODULES</div>
       <div class="list-group list-group-flush homes-nav">
-        <a class="list-group-item list-group-item-action active" href="${pageContext.request.contextPath}/main">🏠 대시보드</a>
-        <a class="list-group-item list-group-item-action" href="#">💸 자산관리</a>
-        <a class="list-group-item list-group-item-action" href="#">📁 DMS (증명서)</a>
-        <a class="list-group-item list-group-item-action" href="#">🗓️ 일정 (캘린더)</a>
-        <a class="list-group-item list-group-item-action" href="#">📝 공유메모</a>
-        <a class="list-group-item list-group-item-action" href="#">📷 가족 앨범(SNS)</a>
-        <a class="list-group-item list-group-item-action" href="#">🤖 ^Assistant</a>
-        <a class="list-group-item list-group-item-action" href="#">🔎 통합검색</a>
+        <%-- ✅ 구현완료 --%>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/main">대시보드</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/scm/deposit/depositRequest">입금요청</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/assistant">AI Assistant</a>
+        <%-- 🚧 미구현 (준비중)        --%>
+        <a class="list-group-item list-group-item-action disabled" href="#">자산관리 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a>
+        <a class="list-group-item list-group-item-action disabled" href="#">DMS (증명서) <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a>
+        <a class="list-group-item list-group-item-action disabled" href="#">구글 캘린더 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a>
+        <a class="list-group-item list-group-item-action disabled" href="#">공유메모 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a>
+        <a class="list-group-item list-group-item-action disabled" href="#">가족 앨범(SNS) <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a>
+        <a class="list-group-item list-group-item-action disabled" href="#">통합검색 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a>
+
       </div>
 
       <div class="homes-nav-title mt-4">QUICK</div>
       <div class="d-grid gap-2">
-        <button class="btn btn-light homes-quick-btn" type="button">+ 구매요청</button>
+        <%-- 🚧 구매요청 미구현
+        <button class="btn btn-light homes-quick-btn" type="button" disabled>+ 구매요청 (준비중)</button>
+        --%>
         <button class="btn btn-outline-light homes-quick-btn-outline" type="button"
 		        onclick="location.href='${pageContext.request.contextPath}/scm/deposit/depositRequest'">
 		  + 입금요청

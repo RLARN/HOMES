@@ -13,3 +13,20 @@
 
 <!-- HOMES 공통 CSS -->
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/homes.css">
+
+<!-- PWA -->
+<link rel="manifest" href="${pageContext.request.contextPath}/manifest.json">
+
+<!-- VAPID 공개키 (Web Push 구독 시 사용) -->
+<script>
+  window.HOMES_VAPID_PUBLIC_KEY = '${vapidPublicKey}';
+</script>
+
+<!-- Service Worker 등록 -->
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(function (e) {
+      console.warn('[SW] 등록 실패:', e);
+    });
+  }
+</script>

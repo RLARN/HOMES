@@ -9,4 +9,6 @@ public interface ScmService {
 	List<ScmVO> getDepositRequestList(ScmVO scmVO);
 	void createDepositRequest(HttpSession session, String familyId, String storeInfo, Long amount, String reason, String requesterId);
 	ScmVO getDepositRequestDetail(String familyId, Long depReqSeq);
+	void updateDepositStatus(String familyId, Long depReqSeq, String reqStatus, String updId);
+	void deleteDepositRequest(String familyId, Long depReqSeq);
 }

@@ -114,7 +114,7 @@
 	  margin-bottom: 16px;
 	  border-radius: 10px;
 	  border: 1px solid #d1d5db;
-	  font-size: 14px;
+	  font-size: 16px; /* iOS zoom 방지 */
 	}
 
 	.login-card input:focus {
