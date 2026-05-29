@@ -7,7 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
@@ -19,8 +23,8 @@ import java.util.concurrent.Executors;
 @RequestMapping("/assistant")
 public class AssistantController {
 
-    private final GeminiService   geminiService;
-    private final ObjectMapper    om       = new ObjectMapper();
+    private final GeminiService geminiService;
+    private final ObjectMapper om = new ObjectMapper();
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     public AssistantController(GeminiService geminiService) {
@@ -35,52 +39,54 @@ public class AssistantController {
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @ResponseBody
     public SseEmitter chat(@RequestBody ChatRequest req, HttpSession session) {
-
         SseEmitter emitter = new SseEmitter(120_000L);
-
         LoginVO loginUser = (LoginVO) session.getAttribute("LoginVO");
+
         if (loginUser == null) {
-            executor.submit(() -> {
-                try {
-                    emitter.send(SseEmitter.event().data("{\"type\":\"error\",\"message\":\"세션 만료\"}"));
-                    emitter.complete();
-                } catch (Exception ignored) {}
-            });
+            executor.submit(() -> sendAndComplete(emitter, Map.of(
+                    "type", "error",
+                    "message", "세션이 만료되었습니다."
+            )));
             return emitter;
         }
 
         if (req.getHistory() == null) req.setHistory(new ArrayList<>());
-
-        String familyId = loginUser.getFamilyId();
-        String userId   = loginUser.getUserId();
-        String userAuth = loginUser.getUserAuth();
 
         executor.submit(() -> {
             try {
                 geminiService.chat(
                         req.getMessage(),
                         req.getHistory(),
-                        familyId, userId, userAuth,
-                        event -> {
-                            try {
-                                emitter.send(SseEmitter.event().data(om.writeValueAsString(event)));
-                            } catch (Exception e) {
-                                emitter.completeWithError(e);
-                            }
-                        }
+                        loginUser.getFamilyId(),
+                        loginUser.getUserId(),
+                        loginUser.getUserAuth(),
+                        event -> send(emitter, event)
                 );
                 emitter.complete();
             } catch (Exception e) {
-                try {
-                    emitter.send(SseEmitter.event().data(
-                            "{\"type\":\"error\",\"message\":\"" +
-                            e.getMessage().replace("\"", "'") + "\"}"
-                    ));
-                    emitter.complete();
-                } catch (Exception ignored) {}
+                sendAndComplete(emitter, Map.of(
+                        "type", "error",
+                        "message", e.getMessage() == null ? "알 수 없는 오류" : e.getMessage()
+                ));
             }
         });
 
         return emitter;
+    }
+
+    private void send(SseEmitter emitter, Map<String, Object> event) {
+        try {
+            emitter.send(SseEmitter.event().data(om.writeValueAsString(event)));
+        } catch (Exception e) {
+            emitter.completeWithError(e);
+        }
+    }
+
+    private void sendAndComplete(SseEmitter emitter, Map<String, Object> event) {
+        try {
+            emitter.send(SseEmitter.event().data(om.writeValueAsString(event)));
+            emitter.complete();
+        } catch (Exception ignored) {
+        }
     }
 }

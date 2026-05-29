@@ -54,6 +54,33 @@
   ORDER BY REG_DT DESC, DEP_REQ_SEQ DESC
 </select>
 
+<select id="searchDepositRequests"
+        resultType="com.eksystems.homes.scm.vo.ScmVO">
+  SELECT
+    DEP_REQ_SEQ   AS depReqSeq,
+    FAMILY_ID     AS familyId,
+    PUR_ITEM_SEQ  AS purItemSeq,
+    STORE_INFO    AS storeInfo,
+    AMOUNT        AS amount,
+    REQ_STATUS    AS reqStatus,
+    REQ_DESC      AS reqDesc,
+    REG_ID        AS regId,
+    REG_DT        AS requestDt,
+    UPD_ID        AS updId,
+    UPD_DT        AS updDt
+  FROM SCM_DEPOSIT_REQUEST_MST
+  WHERE FAMILY_ID = #{familyId}
+    AND (
+      STORE_INFO LIKE CONCAT('%', #{keyword}, '%')
+      OR REQ_DESC LIKE CONCAT('%', #{keyword}, '%')
+      OR REQ_STATUS LIKE CONCAT('%', #{keyword}, '%')
+      OR REG_ID LIKE CONCAT('%', #{keyword}, '%')
+      OR CAST(AMOUNT AS CHAR) LIKE CONCAT('%', #{keyword}, '%')
+    )
+  ORDER BY REG_DT DESC, DEP_REQ_SEQ DESC
+  LIMIT 10
+</select>
+
 <select id="selectDepositRequestDetail"
         resultType="com.eksystems.homes.scm.vo.ScmVO">
   SELECT

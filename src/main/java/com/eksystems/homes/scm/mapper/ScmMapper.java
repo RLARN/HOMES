@@ -11,6 +11,9 @@ public interface ScmMapper {
     int insertDepositRequest(ScmVO vo);
 
 	List<ScmVO> selectDepositRequestList(ScmVO scmVO);
+
+	List<ScmVO> searchDepositRequests(@Param("familyId") String familyId,
+	                                  @Param("keyword") String keyword);
 	
 	ScmVO selectDepositRequestDetail(@Param("familyId") String familyId,
             @Param("depReqSeq") Long depReqSeq);

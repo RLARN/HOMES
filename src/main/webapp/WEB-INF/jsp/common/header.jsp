@@ -15,6 +15,9 @@
     </a>
 
     <div class="ms-auto d-flex align-items-center gap-2">
+      <a class="btn btn-sm btn-outline-light homes-pill"
+         href="${pageContext.request.contextPath}/assistant"
+         title="AI Assistant">AI Assistant</a>
 
       <!-- 알림 구독 버튼 -->
       <button id="pushBellBtn"

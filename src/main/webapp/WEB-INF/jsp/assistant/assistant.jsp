@@ -1,183 +1,232 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!doctype html>
 <html lang="ko">
 <head>
   <%@ include file="/WEB-INF/jsp/common/head.jsp" %>
   <style>
-    /* ── iOS 키보드 대응: position:fixed 기반 전체 고정 레이아웃 ── */
-    html, body { height: 100%; margin: 0; overflow: hidden; }
-
-    .homes-topbar { position: fixed !important; top: 0; left: 0; right: 0; z-index: 1030; }
-
+    :root {
+      --assistant-vh: 100dvh;
+      --assistant-input-height: 64px;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden !important;
+      overscroll-behavior: none;
+    }
+    body { position: fixed !important; inset: 0; touch-action: manipulation; }
+    .homes-topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1030; height: 56px; }
+    .homes-sidebar { min-height: 0 !important; }
     .homes-shell {
       position: fixed;
-      top: 56px; left: 0; right: 0; bottom: 0;
+      top: 56px;
+      left: 0;
+      right: 0;
+      height: calc(var(--assistant-vh) - 56px);
+      overflow: hidden;
       display: flex;
-      overflow: hidden;
     }
-
-    .homes-sidebar            { min-height: 0 !important; }
-    #homesSidebar.offcanvas-lg { height: 100% !important; }
-
     .homes-main {
-      flex: 1; min-width: 0;
-      display: flex; flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      flex: 1;
+      display: flex;
+      padding: 12px;
       overflow: hidden;
-      padding: 12px 16px;
     }
-    @media (min-width: 768px) { .homes-main { padding: 16px 24px; } }
-
-    /* ── 채팅 카드 ── */
     .chat-wrap {
-      flex: 1; min-height: 0;
-      display: flex; flex-direction: column;
+      min-height: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
+      border-radius: 8px;
     }
-
+    .chat-head {
+      flex: 0 0 auto;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(17, 24, 39, .08);
+      background: #fff;
+    }
     .chat-messages {
-      flex: 1; min-height: 0;
+      min-height: 0;
+      flex: 1;
       overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
-      padding: 16px 20px;
-      display: flex; flex-direction: column;
-      gap: 14px;
     }
-
-    /* ── 말풍선 ── */
     .chat-bubble {
-      padding: 10px 14px;
-      border-radius: 18px;
-      line-height: 1.55;
-      word-break: break-word;
-      white-space: pre-wrap;
+      max-width: min(76%, 720px);
+      padding: 10px 13px;
+      border-radius: 16px;
       font-size: 14px;
+      line-height: 1.55;
+      white-space: normal;
+      word-break: break-word;
     }
-    @media (max-width: 767px) { .chat-bubble { font-size: 13px; } }
-
+    .chat-bubble p { margin: 0 0 8px; }
+    .chat-bubble p:last-child { margin-bottom: 0; }
+    .chat-bubble ol,
+    .chat-bubble ul { margin: 0 0 8px 20px; padding: 0; }
+    .chat-bubble li { margin: 3px 0; }
+    .chat-bubble code {
+      padding: 1px 5px;
+      border-radius: 5px;
+      background: #f1f5f9;
+      font-size: .92em;
+    }
     .chat-bubble.user {
       align-self: flex-end;
-      max-width: 78%;
-      background: #1e40af; color: #fff;
-      border-bottom-right-radius: 4px;
+      color: #fff;
+      background: #1e40af;
+      border-bottom-right-radius: 5px;
+      white-space: pre-wrap;
     }
-
-    /* AI 행 */
-    .ai-row { display: flex; align-items: flex-start; gap: 9px; max-width: 82%; }
+    .ai-row { display: flex; align-items: flex-start; gap: 9px; }
     .ai-avatar {
-      flex-shrink: 0;
-      width: 28px; height: 28px; border-radius: 50%;
-      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 12px; font-weight: 800;
-      margin-top: 2px;
-      box-shadow: 0 2px 6px rgba(30,58,138,.22);
+      flex: 0 0 28px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #fff;
+      border: 1px solid rgba(17, 24, 39, .08);
+      box-shadow: 0 5px 14px rgba(30, 64, 175, .2);
     }
     .ai-row .chat-bubble {
+      color: #111827;
       background: #fff;
-      border: 1px solid rgba(17,24,39,.09);
-      box-shadow: 0 2px 8px rgba(16,24,40,.05);
-      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(17, 24, 39, .09);
+      box-shadow: 0 2px 8px rgba(16, 24, 40, .05);
+      border-bottom-left-radius: 5px;
     }
-
-    /* 진행 상태 행 */
+    .tool-badge {
+      align-self: flex-start;
+      margin-left: 37px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      color: #475569;
+      background: #eef2ff;
+      font-size: 12px;
+    }
     .process-row {
-      display: flex; align-items: center; gap: 9px;
-      padding: 0 2px;
-    }
-    .process-avatar {
-      width: 28px; height: 28px; border-radius: 50%;
-      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 12px; font-weight: 800;
-      flex-shrink: 0;
-    }
-    .process-content {
-      display: flex; flex-direction: column; gap: 4px;
+      margin-left: 37px;
+      max-width: min(76%, 720px);
+      padding: 10px 12px;
+      border-radius: 14px;
+      color: #475569;
+      background: #fff;
+      border: 1px solid rgba(17, 24, 39, .08);
     }
     .process-step {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 12px; color: #6b7280;
-      animation: fadeIn .2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.5;
     }
-    .process-step.active { color: #1e40af; font-weight: 500; }
-    .process-step.done   { color: #16a34a; }
-    .process-step svg    { flex-shrink: 0; }
-    @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform:none; } }
-
-    /* 생각 중 dots */
-    .thinking-dots { display: flex; gap: 4px; align-items: center; padding: 3px 0; }
-    .thinking-dots span {
-      width: 6px; height: 6px; border-radius: 50%; background: #cbd5e1;
-      animation: dot-up 1.4s ease-in-out infinite;
+    .process-step + .process-step { margin-top: 5px; }
+    .process-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #94a3b8;
     }
-    .thinking-dots span:nth-child(2) { animation-delay: .18s; }
-    .thinking-dots span:nth-child(3) { animation-delay: .36s; }
-    @keyframes dot-up {
-      0%,60%,100% { transform: translateY(0);    background: #cbd5e1; }
-      30%          { transform: translateY(-5px); background: #64748b; }
+    .process-step.active .process-dot {
+      background: #2563eb;
+      animation: pulse 1s ease-in-out infinite;
     }
-
-    /* tool 배지 */
-    .tool-badge {
-      margin-left: 37px;
-      align-self: flex-start;
-      font-size: 11px; color: #6b7280;
-      padding: 2px 9px; background: #f3f4f6; border-radius: 999px;
-      margin-top: -6px;
+    .process-step.idle .process-dot { background: #94a3b8; }
+    .process-step.done .process-dot { background: #16a34a; }
+    .process-step.error .process-dot { background: #dc2626; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(.9); opacity: .45; }
+      50% { transform: scale(1.35); opacity: 1; }
     }
-
-    /* ── 입력창 ── */
     .chat-input-bar {
-      flex-shrink: 0;
-      border-top: 1px solid rgba(17,24,39,.08); background: #fff;
-      padding: 10px 14px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom));
-      display: flex; gap: 8px; align-items: flex-end;
+      flex: 0 0 auto;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 10px;
+      border-top: 1px solid rgba(17, 24, 39, .08);
+      background: #fff;
     }
     .chat-input-bar textarea {
-      flex: 1; resize: none;
-      border-radius: 22px; border: 1px solid rgba(17,24,39,.18);
-      padding: 9px 14px; font-size: 16px; line-height: 1.5;
-      max-height: 110px; overflow-y: auto; background: #f9fafb;
-      transition: border-color .15s, background .15s, box-shadow .15s;
+      min-height: 42px;
+      max-height: 120px;
+      flex: 1;
+      resize: none;
+      overflow-y: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(17, 24, 39, .15);
+      padding: 10px 13px;
+      font-size: 16px;
+      line-height: 1.45;
     }
     .chat-input-bar textarea:focus {
-      outline: none; background: #fff;
-      border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30,64,175,.1);
+      outline: none;
+      border-color: #1e40af;
+      box-shadow: 0 0 0 2px rgba(30, 64, 175, .14);
     }
-    #sendBtn {
-      flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
-      padding: 0; display: flex; align-items: center; justify-content: center;
+    .send-btn {
+      flex: 0 0 42px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 0;
+      color: #fff;
+      background: #1e40af;
+      font-size: 18px;
+      line-height: 1;
     }
-    #sendBtn svg { width: 18px; height: 18px; fill: currentColor; }
+    .send-btn:disabled { opacity: .55; }
+    @media (max-width: 767.98px) {
+      .homes-main { padding: 0; }
+      .chat-wrap { border-radius: 0; border-left: 0; border-right: 0; }
+      .chat-head { padding: 11px 13px; }
+      .chat-head .small { display: none; }
+      .chat-messages { padding: 13px 11px; }
+      .chat-input-bar {
+        min-height: var(--assistant-input-height);
+        padding: 10px 12px calc(26px + env(safe-area-inset-bottom, 0px));
+      }
+      body.keyboard-open .chat-input-bar { padding-bottom: 10px; }
+      .chat-bubble { max-width: 82%; font-size: 13px; padding: 9px 12px; }
+      .process-row { max-width: 82%; }
+    }
   </style>
 </head>
 <body class="homes-bg">
-
   <%@ include file="/WEB-INF/jsp/common/header.jsp" %>
 
-  <div class="homes-shell d-lg-flex">
+  <div class="homes-shell d-lg-flex" id="assistantShell">
     <%@ include file="/WEB-INF/jsp/common/sidebar.jsp" %>
 
-    <main class="homes-main flex-grow-1">
-      <div class="chat-wrap card homes-card overflow-hidden">
-
-        <div class="px-4 py-3 border-bottom d-flex align-items-center gap-2" style="flex-shrink:0;">
-          <div class="homes-badge">AI</div>
+    <main class="homes-main">
+      <div class="chat-wrap card homes-card">
+        <div class="chat-head d-flex align-items-center gap-2">
+          <%--<div class="homes-badge">AI</div>--%>
           <div>
-            <div class="fw-semibold">^HOMES AI Assistant</div>
-            <div class="text-muted small">입금요청 조회·결재 등 HOMES 작업을 요청하세요.</div>
+            <div class="fw-semibold">AI Assistant</div>
+            <div class="text-muted small">개인 대화와 HOMES 업무 처리를 함께 도와드립니다.</div>
           </div>
         </div>
 
-        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="ai-row">
+            <img class="ai-avatar" src="${pageContext.request.contextPath}/img/homesAI.png" alt="^HOMES AI">
+            <div class="chat-bubble"><p>무엇이든 편하게 말해주세요. 조회, 결재, 삭제 같은 HOMES 업무도 처리할 수 있어요.</p></div>
+          </div>
+        </div>
 
         <div class="chat-input-bar">
-          <textarea id="chatInput" rows="1" placeholder="무엇이든 물어보세요…"></textarea>
-          <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()" title="전송">
-            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-          </button>
+          <textarea id="chatInput" rows="1" placeholder="메시지를 입력하세요"></textarea>
+          <button type="button" class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
         </div>
       </div>
     </main>
@@ -192,115 +241,168 @@
   let isProcessing = false;
 
   const messagesEl = document.getElementById('chatMessages');
-  const inputEl    = document.getElementById('chatInput');
-  const sendBtn    = document.getElementById('sendBtn');
+  const inputEl = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
 
-  // ── iOS 키보드: visual viewport 기준으로 shell 위치 재계산 ──────────────────
-  (function () {
-    if (!window.visualViewport) return;
-    const shell = document.querySelector('.homes-shell');
-    function adjust() {
-      const vv    = window.visualViewport;
-      const top   = Math.max(56, vv.offsetTop + 56);
-      const h     = vv.height - (top - vv.offsetTop);
-      shell.style.top    = top + 'px';
-      shell.style.height = h + 'px';
-    }
-    window.visualViewport.addEventListener('resize', adjust);
-    window.visualViewport.addEventListener('scroll', adjust);
-  })();
+  let viewportRaf = 0;
+  let largestViewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
 
-  // 초기 메시지
-  appendAiBubble('안녕하세요! ^HOMES 어시스턴트입니다. 무엇을 도와드릴까요?\n입금요청 목록 조회, 결재 처리 등을 도와드릴 수 있어요.');
+  function syncViewport() {
+    const vv = window.visualViewport;
+    const layoutHeight = window.innerHeight || document.documentElement.clientHeight;
+    const viewportHeight = vv ? vv.height : layoutHeight;
+    const keyboardOffset = vv ? Math.max(0, layoutHeight - vv.height - vv.offsetTop) : 0;
+    largestViewportHeight = Math.max(largestViewportHeight, viewportHeight);
+    const focusedInput = document.activeElement === inputEl;
+    const keyboardOpen = focusedInput && (keyboardOffset > 80 || largestViewportHeight - viewportHeight > 120);
 
-  // Enter 전송
-  inputEl.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    document.documentElement.style.setProperty('--assistant-vh', Math.max(320, viewportHeight) + 'px');
+    document.body.classList.toggle('keyboard-open', keyboardOpen);
+  }
+
+  function requestViewportSync() {
+    if (viewportRaf) return;
+    viewportRaf = window.requestAnimationFrame(function () {
+      viewportRaf = 0;
+      syncViewport();
+    });
+  }
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', requestViewportSync);
+  }
+  window.addEventListener('resize', requestViewportSync);
+  syncViewport();
+
+  window.addEventListener('orientationchange', function () {
+    setTimeout(syncViewport, 250);
   });
+
+  inputEl.addEventListener('touchstart', function (e) {
+    if (document.activeElement === inputEl) return;
+    e.preventDefault();
+    inputEl.focus({ preventScroll: true });
+    requestViewportSync();
+  }, { passive: false });
+
+  inputEl.addEventListener('focus', function () {
+    resetPageScroll();
+    requestViewportSync();
+    setTimeout(scrollBottom, 120);
+  });
+
+  inputEl.addEventListener('blur', function () {
+    setTimeout(syncViewport, 120);
+  });
+
+  inputEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
   inputEl.addEventListener('input', function () {
     this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 110) + 'px';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
   });
 
-  // ── 전송 & SSE ──────────────────────────────────────────────────────────────
+  const initialSearch = new URLSearchParams(window.location.search).get('search');
+  if (initialSearch && initialSearch.trim()) {
+    window.setTimeout(function () {
+      inputEl.value = '통합검색 : ' + initialSearch.trim();
+      inputEl.dispatchEvent(new Event('input'));
+      sendMessage();
+    }, 250);
+  }
 
   async function sendMessage() {
     const text = inputEl.value.trim();
     if (!text || isProcessing) return;
 
-    inputEl.value = ''; inputEl.style.height = 'auto';
-    isProcessing = true; sendBtn.disabled = true;
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    isProcessing = true;
+    sendBtn.disabled = true;
 
     appendUserBubble(text);
-
-    // 진행 상태 UI 생성
-    const { processRowEl, addStep, removeProcess } = createProcessRow();
+    const process = createProcessRow();
 
     try {
       const res = await fetch(HOMES.ctx + '/assistant/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
         body: JSON.stringify({ message: text, history: chatHistory })
       });
 
-      const reader  = res.body.getReader();
-      const decoder = new TextDecoder();
-      let   buffer  = '';
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
 
       while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop();
-
-        for (const part of parts) {
-          const line = part.split('\n').find(l => l.startsWith('data:'));
-          if (!line) continue;
-          let event;
-          try { event = JSON.parse(line.slice(5).trim()); } catch { continue; }
-          handleSseEvent(event, addStep, removeProcess);
-        }
+        const read = await reader.read();
+        if (read.done) break;
+        buffer += decoder.decode(read.value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop();
+        events.forEach(chunk => {
+          chunk.split('\n').forEach(line => {
+            if (!line.startsWith('data:')) return;
+            try {
+              handleSseEvent(JSON.parse(line.slice(5).trim()), process);
+            } catch (e) {
+              process.addStep('응답 해석 실패: ' + e.message, 'error');
+            }
+          });
+        });
       }
     } catch (e) {
-      removeProcess();
+      process.remove();
       appendAiBubble('네트워크 오류: ' + e.message);
     } finally {
-      isProcessing = false; sendBtn.disabled = false;
-      inputEl.focus();
+      isProcessing = false;
+      sendBtn.disabled = false;
     }
   }
 
-  function handleSseEvent(event, addStep, removeProcess) {
+  function handleSseEvent(event, process) {
     switch (event.type) {
       case 'status':
-        addStep(event.message, 'active');
+        process.addStep(event.message, 'active');
         break;
       case 'tool_start':
-        addStep('🔧 ' + event.label + '…', 'active');
+        process.addStep(event.label + ' 실행 중', 'active');
         break;
       case 'tool_end':
-        addStep('✓ ' + event.label, 'done');
+        process.finishActive(event.label + ' 완료');
+        break;
+      case 'tool_error':
+        process.failActive(event.label + ' 오류: ' + event.message);
         break;
       case 'done_data':
-        removeProcess();
+        process.remove();
         if (event.toolsUsed && event.toolsUsed.length > 0) {
-          const nm = { list_deposit_requests:'목록 조회', get_deposit_detail:'상세 조회',
-                       approve_deposit:'결재 처리', delete_deposit:'항목 삭제' };
-          appendToolBadge('🔧 ' + event.toolsUsed.map(t => nm[t]||t).join(' · '));
+          const names = {
+            global_search: '전체 검색',
+            list_deposit_requests: '입금요청 목록 조회',
+            get_deposit_detail: '입금요청 상세 조회',
+            insert_deposit_request: '입금요청 등록',
+            insert_note: '공유메모 등록',
+            update_note: '공유메모 수정',
+            approve_deposit: '입금요청 결재',
+            delete_deposit: '입금요청 삭제'
+          };
+          appendToolBadge(event.toolsUsed.map(t => names[t] || t).join(' · '));
         }
         appendAiBubble(event.reply, true);
         chatHistory = event.history || chatHistory;
         break;
       case 'error':
-        removeProcess();
+        process.remove();
         appendAiBubble('오류: ' + event.message);
         break;
     }
   }
-
-  // ── DOM 생성 헬퍼 ─────────────────────────────────────────────────────────
 
   function appendUserBubble(text) {
     const div = document.createElement('div');
@@ -310,67 +412,150 @@
     scrollBottom();
   }
 
-  async function appendAiBubble(text, typewrite = false) {
-    const row    = document.createElement('div');  row.className = 'ai-row';
-    const avatar = document.createElement('div');  avatar.className = 'ai-avatar'; avatar.textContent = '✦';
-    const bubble = document.createElement('div');  bubble.className = 'chat-bubble';
-    row.appendChild(avatar); row.appendChild(bubble);
+  async function appendAiBubble(text, typewrite) {
+    const row = document.createElement('div');
+    row.className = 'ai-row';
+    const avatar = document.createElement('img');
+    avatar.className = 'ai-avatar';
+    avatar.src = HOMES.ctx + '/img/homesAI.png';
+    avatar.alt = '^HOMES AI';
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    row.appendChild(avatar);
+    row.appendChild(bubble);
     messagesEl.appendChild(row);
 
-    if (typewrite) { await typeText(bubble, text); }
-    else           { bubble.textContent = text; scrollBottom(); }
+    if (typewrite) await typeText(bubble, text || '');
+    else {
+      renderMarkdown(bubble, text || '');
+      scrollBottom();
+    }
   }
 
   function appendToolBadge(label) {
     const div = document.createElement('div');
-    div.className = 'tool-badge'; div.textContent = label;
+    div.className = 'tool-badge';
+    div.textContent = label;
     messagesEl.appendChild(div);
+    scrollBottom();
   }
 
   function createProcessRow() {
-    const row     = document.createElement('div'); row.className = 'process-row';
-    const avatar  = document.createElement('div'); avatar.className = 'process-avatar'; avatar.textContent = '✦';
-    const content = document.createElement('div'); content.className = 'process-content';
-
-    // 초기: 점 애니메이션
-    const dotsDiv = document.createElement('div'); dotsDiv.className = 'thinking-dots';
-    dotsDiv.innerHTML = '<span></span><span></span><span></span>';
-    content.appendChild(dotsDiv);
-
-    row.appendChild(avatar); row.appendChild(content);
-    messagesEl.appendChild(row);
+    const box = document.createElement('div');
+    box.className = 'process-row';
+    messagesEl.appendChild(box);
     scrollBottom();
 
-    let dotRemoved = false;
-
-    function addStep(label, state) {
-      if (!dotRemoved) { dotsDiv.remove(); dotRemoved = true; }
-      const step = document.createElement('div');
-      step.className = 'process-step ' + (state || '');
-      step.textContent = label;
-      content.appendChild(step);
-      scrollBottom();
-    }
-
-    function removeProcess() {
-      row.remove();
-    }
-
-    return { processRowEl: row, addStep, removeProcess };
+    return {
+      addStep(label, state) {
+        if (state === 'active') {
+          box.querySelectorAll('.process-step.active').forEach(item => {
+            item.classList.remove('active');
+            item.classList.add('idle');
+          });
+        }
+        const step = document.createElement('div');
+        step.className = 'process-step ' + state;
+        step.innerHTML = '<span class="process-dot"></span><span></span>';
+        step.lastChild.textContent = label;
+        box.appendChild(step);
+        scrollBottom();
+      },
+      finishActive(label) {
+        const activeSteps = box.querySelectorAll('.process-step.active');
+        const active = activeSteps[activeSteps.length - 1];
+        if (!active) {
+          this.addStep(label, 'done');
+          return;
+        }
+        this.addStep(label, 'done');
+      },
+      failActive(label) {
+        const activeSteps = box.querySelectorAll('.process-step.active');
+        const active = activeSteps[activeSteps.length - 1];
+        if (!active) {
+          this.addStep(label, 'error');
+          return;
+        }
+        this.addStep(label, 'error');
+      },
+      remove() {
+        if (box.parentNode) box.parentNode.removeChild(box);
+      }
+    };
   }
 
-  // ── 타자 효과 ─────────────────────────────────────────────────────────────
-
   async function typeText(el, text) {
-    const chunkSize = Math.max(1, Math.ceil(text.length / 90));
+    el.textContent = '';
+    const chunkSize = text.length > 400 ? 3 : 1;
     for (let i = 0; i < text.length; i += chunkSize) {
       el.textContent += text.slice(i, i + chunkSize);
       scrollBottom();
-      await new Promise(r => setTimeout(r, 14));
+      await new Promise(resolve => setTimeout(resolve, 12));
     }
+    renderMarkdown(el, text);
+    scrollBottom();
   }
 
-  function scrollBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+  function renderMarkdown(el, text) {
+    const lines = escapeHtml(text || '').split('\n');
+    let html = '';
+    let inOl = false;
+    let inUl = false;
+
+    lines.forEach(line => {
+      const ordered = line.match(/^(\d+)\.\s+(.+)$/);
+      const unordered = line.match(/^[-*]\s+(.+)$/);
+
+      if (ordered) {
+        if (inUl) { html += '</ul>'; inUl = false; }
+        if (!inOl) { html += '<ol>'; inOl = true; }
+        html += '<li>' + inlineMarkdown(ordered[2]) + '</li>';
+        return;
+      }
+
+      if (unordered) {
+        if (inOl) { html += '</ol>'; inOl = false; }
+        if (!inUl) { html += '<ul>'; inUl = true; }
+        html += '<li>' + inlineMarkdown(unordered[1]) + '</li>';
+        return;
+      }
+
+      if (inOl) { html += '</ol>'; inOl = false; }
+      if (inUl) { html += '</ul>'; inUl = false; }
+      html += line.trim() ? '<p>' + inlineMarkdown(line) + '</p>' : '<br>';
+    });
+
+    if (inOl) html += '</ol>';
+    if (inUl) html += '</ul>';
+    el.innerHTML = html;
+  }
+
+  function inlineMarkdown(text) {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`(.+?)`/g, '<code>$1</code>');
+  }
+
+  function escapeHtml(text) {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function scrollBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function resetPageScroll() {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    if (window.scrollY !== 0) window.scrollTo(0, 0);
+  }
+
   </script>
 </body>
 </html>

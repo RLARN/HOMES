@@ -15,20 +15,23 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                         "/login", "/login/**",
-                        "/loginProcess",         // ✅ 이거 반드시!
+                        "/loginProcess",
                         "/logout",
                         "/error", "/error/**",
                         "/css/**", "/js/**", "/assets/**",
                         "/img/**",
                         "/favicon.ico",
-                        "/sw.js",           // Service Worker (인증 불필요)
-                        "/manifest.json"    // PWA manifest (인증 불필요)
+                        "/sw.js",
+                        "/manifest.json"
                 );
     }
-    // ✅ 이거 추가
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/main/**")   // URL 경로
+        registry.addResourceHandler("/img/**")
+                .addResourceLocations("classpath:/img/");
+
+        registry.addResourceHandler("/main/**")
                 .addResourceLocations("classpath:/img/main/");
     }
 }

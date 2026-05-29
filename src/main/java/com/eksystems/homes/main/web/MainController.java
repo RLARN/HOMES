@@ -1,5 +1,6 @@
 package com.eksystems.homes.main.web;
 
+import com.eksystems.homes.assistant.service.GeminiService;
 import com.eksystems.homes.login.vo.LoginVO;
 import com.eksystems.homes.scm.service.ScmService;
 import com.eksystems.homes.scm.vo.ScmVO;
@@ -15,9 +16,11 @@ import java.util.List;
 public class MainController {
 
     private final ScmService scmService;
+    private final GeminiService geminiService;
     
-    public MainController(ScmService scmService) {
+    public MainController(ScmService scmService, GeminiService geminiService) {
         this.scmService = scmService;
+        this.geminiService = geminiService;
     }
 
     @GetMapping({"/", "/main"})
@@ -44,6 +47,7 @@ public class MainController {
         
         model.addAttribute("requestedTotal", requestedTotal);
         model.addAttribute("requestedStandbyCount", requestedStandbyCount);
+        model.addAttribute("dailyQuote", geminiService.generateDailyQuote(loginUser.getUserNm()));
 
         return "main/main";
     }

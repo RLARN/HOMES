@@ -1,4 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!doctype html>
 <html lang="ko">
 <head>
@@ -31,8 +32,22 @@
             </div>
             <div class="d-flex gap-2">
               <a class="btn btn-light homes-pill px-3" href="#">오늘 일정 보기</a>
-              <a class="btn btn-outline-light homes-pill px-3" href="#">새 글 작성</a>
+              <a class="btn btn-outline-light homes-pill px-3" href="${pageContext.request.contextPath}/note/form">새 글 작성</a>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card homes-card mb-4">
+        <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4">
+          <div class="fw-semibold">오늘의 한 줄</div>
+        </div>
+        <div class="card-body pt-2 px-3 px-md-4">
+          <div class="homes-quote">
+            “<c:out value="${dailyQuote}" />”
+          </div>
+          <div class="small text-muted mt-2">
+            AI가 오늘을 위한 문장을 추천했어요.
           </div>
         </div>
       </div>
@@ -48,9 +63,9 @@
 				  <div class="h4 mb-1 fw-bold">
 				    <fmt:formatNumber value="${requestedTotal}" pattern="#,##0" />원
 				  </div>
-                  <div class="small text-muted">전월 대비 <span class="text-success fw-semibold">0%</span></div>
+                  <div class="small text-muted">전월 대비 <span class="text-success fw-semibold">12% 증가</span></div>
                 </div>
-                <div class="homes-badge">ASSET</div>
+                <div class="homes-badge">Budget</div>
               </div>
             </div>
           </div>
@@ -61,7 +76,7 @@
             <div class="card-body">
               <div class="d-flex align-items-start justify-content-between">
                 <div>
-                  <div class="text-muted small">입금요청 대기</div>
+                  <div class="text-muted small">결재 대기</div>
                   <div class="h4 mb-1 fw-bold">${requestedStandbyCount}</div>
                   <div class="small text-muted">처리 필요</div>
                 </div>
@@ -70,14 +85,41 @@
             </div>
           </div>
         </div>
-
+        <div class="col-12 col-md-6 col-xl-3">
+          <div class="card homes-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start justify-content-between">
+                <div>
+                  <div class="text-muted small">총 자산</div>
+                  <div class="h4 mb-1 fw-bold">8,223,000,000 KRW</div>
+                  <div class="small text-muted">전월 대비 <span class="text-success fw-semibold">21% 증가</span></div>
+                </div>
+                <div class="homes-badge">Asset</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+          <div class="card homes-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start justify-content-between">
+                <div>
+                  <div class="text-muted small">연간 자산 증가율</div>
+                  <div class="h4 mb-1 fw-bold">21.38%</div>
+                  <div class="small text-muted">전년 대비 <span class="text-success fw-semibold">424,000,000 KRW 증가</span></div>
+                </div>
+                <div class="homes-badge">Asset</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="col-12 col-md-6 col-xl-3">
           <div class="card homes-card">
             <div class="card-body">
               <div class="d-flex align-items-start justify-content-between">
                 <div>
                   <div class="text-muted small">이번주 일정</div>
-                  <div class="h4 mb-1 fw-bold">0</div>
+                  <div class="h4 mb-1 fw-bold">3</div>
                   <div class="small text-muted">Google 연동 예정</div>
                 </div>
                 <div class="homes-badge">CAL</div>
@@ -91,11 +133,11 @@
             <div class="card-body">
               <div class="d-flex align-items-start justify-content-between">
                 <div>
-                  <div class="text-muted small">새 메모/게시글</div>
-                  <div class="h4 mb-1 fw-bold">0</div>
+                  <div class="text-muted small">새 메모</div>
+                  <div class="h4 mb-1 fw-bold">1</div>
                   <div class="small text-muted">오늘 작성</div>
                 </div>
-                <div class="homes-badge">BOARD</div>
+                <div class="homes-badge">note</div>
               </div>
             </div>
           </div>
@@ -150,7 +192,7 @@
             <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4">
               <div class="d-flex align-items-center justify-content-between">
                 <div class="fw-semibold">최근 활동</div>
-                <a class="small text-decoration-none" href="#">전체보기</a>
+                <a class="small text-decoration-none" href="${pageContext.request.contextPath}/note/list">전체보기</a>
               </div>
             </div>
 
@@ -177,25 +219,15 @@
 				        onclick="location.href='${pageContext.request.contextPath}/scm/deposit/depositRequest'">
 				  입금요청 작성
 				</button>
-                <button class="btn btn-outline-secondary homes-pill" type="button">메모 남기기</button>
+                <button class="btn btn-outline-secondary homes-pill"
+                        type="button"
+                        onclick="location.href='${pageContext.request.contextPath}/note/form'">
+                  메모 남기기
+                </button>
               </div>
             </div>
           </div>
 
-          <div class="card homes-card">
-            <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4">
-              <div class="fw-semibold">오늘의 한 줄</div>
-            </div>
-
-            <div class="card-body pt-2 px-3 px-md-4">
-              <div class="homes-quote">
-                “작게 정리하면, 크게 편해진다.”
-              </div>
-              <div class="small text-muted mt-2">
-                (나중에 AI가 추천 문구/가계부 요약도 가능)
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

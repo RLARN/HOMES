@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.note.mapper.NoteMapper">
+
+  <select id="selectNoteList"
+          parameterType="com.eksystems.homes.note.vo.NoteVO"
+          resultType="com.eksystems.homes.note.vo.NoteVO">
+    SELECT
+      m.NOTE_SEQ AS noteSeq,
+      m.FAMILY_ID AS familyId,
+      m.TITLE AS title,
+      m.REG_ID AS regId,
+      m.REG_DT AS regDt,
+      m.UPD_ID AS updId,
+      m.UPD_DT AS updDt,
+      DATE_FORMAT(m.REG_DT, '%Y-%m-%d %H:%i') AS regDtText,
+      DATE_FORMAT(COALESCE(m.UPD_DT, m.REG_DT), '%Y-%m-%d %H:%i') AS updDtText
+    FROM note_mst m
+    WHERE m.FAMILY_ID = #{familyId}
+      AND m.DEL_YN = 'N'
+    <if test="title != null and title != ''">
+      AND m.TITLE LIKE CONCAT('%', #{title}, '%')
+    </if>
+    ORDER BY COALESCE(m.UPD_DT, m.REG_DT) DESC, m.NOTE_SEQ DESC
+  </select>
+
+  <select id="searchNotes"
+          resultType="com.eksystems.homes.note.vo.NoteVO">
+    SELECT
+      m.NOTE_SEQ AS noteSeq,
+      m.FAMILY_ID AS familyId,
+      m.TITLE AS title,
+      d.CONTENT AS content,
+      m.REG_ID AS regId,
+      m.REG_DT AS regDt,
+      m.UPD_ID AS updId,
+      m.UPD_DT AS updDt,
+      DATE_FORMAT(m.REG_DT, '%Y-%m-%d %H:%i') AS regDtText,
+      DATE_FORMAT(COALESCE(m.UPD_DT, m.REG_DT), '%Y-%m-%d %H:%i') AS updDtText
+    FROM note_mst m
+    INNER JOIN note_dtl d
+      ON d.FAMILY_ID = m.FAMILY_ID
+     AND d.NOTE_SEQ = m.NOTE_SEQ
+    WHERE m.FAMILY_ID = #{familyId}
+      AND m.DEL_YN = 'N'
+      AND (
+        m.TITLE LIKE CONCAT('%', #{keyword}, '%')
+        OR d.CONTENT LIKE CONCAT('%', #{keyword}, '%')
+      )
+    ORDER BY COALESCE(m.UPD_DT, m.REG_DT) DESC, m.NOTE_SEQ DESC
+    LIMIT 10
+  </select>
+
+  <select id="selectNoteDetail"
+          resultType="com.eksystems.homes.note.vo.NoteVO">
+    SELECT
+      m.NOTE_SEQ AS noteSeq,
+      m.FAMILY_ID AS familyId,
+      m.TITLE AS title,
+      d.CONTENT AS content,
+      m.REG_ID AS regId,
+      m.REG_DT AS regDt,
+      m.UPD_ID AS updId,
+      m.UPD_DT AS updDt,
+      DATE_FORMAT(m.REG_DT, '%Y-%m-%d %H:%i') AS regDtText,
+      DATE_FORMAT(COALESCE(m.UPD_DT, m.REG_DT), '%Y-%m-%d %H:%i') AS updDtText
+    FROM note_mst m
+    INNER JOIN note_dtl d
+      ON d.FAMILY_ID = m.FAMILY_ID
+     AND d.NOTE_SEQ = m.NOTE_SEQ
+    WHERE m.FAMILY_ID = #{familyId}
+      AND m.NOTE_SEQ = #{noteSeq}
+      AND m.DEL_YN = 'N'
+  </select>
+
+  <insert id="insertNoteMst"
+          parameterType="com.eksystems.homes.note.vo.NoteVO"
+          useGeneratedKeys="true"
+          keyProperty="noteSeq">
+    INSERT INTO note_mst
+    (
+      FAMILY_ID,
+      TITLE,
+      DEL_YN,
+      REG_ID,
+      REG_DT,
+      UPD_ID,
+      UPD_DT
+    )
+    VALUES
+    (
+      #{familyId},
+      #{title},
+      'N',
+      #{regId},
+      NOW(),
+      #{regId},
+      NOW()
+    )
+  </insert>
+
+  <insert id="insertNoteDtl"
+          parameterType="com.eksystems.homes.note.vo.NoteVO">
+    INSERT INTO note_dtl
+    (
+      FAMILY_ID,
+      NOTE_SEQ,
+      CONTENT
+    )
+    VALUES
+    (
+      #{familyId},
+      #{noteSeq},
+      #{content}
+    )
+  </insert>
+
+  <update id="updateNoteMst"
+          parameterType="com.eksystems.homes.note.vo.NoteVO">
+    UPDATE note_mst
+    SET TITLE = #{title},
+        UPD_ID = #{updId},
+        UPD_DT = NOW()
+    WHERE FAMILY_ID = #{familyId}
+      AND NOTE_SEQ = #{noteSeq}
+      AND DEL_YN = 'N'
+  </update>
+
+  <update id="updateNoteDtl"
+          parameterType="com.eksystems.homes.note.vo.NoteVO">
+    UPDATE note_dtl
+    SET CONTENT = #{content}
+    WHERE FAMILY_ID = #{familyId}
+      AND NOTE_SEQ = #{noteSeq}
+  </update>
+
+  <update id="deleteNote">
+    UPDATE note_mst
+    SET DEL_YN = 'Y',
+        UPD_ID = #{updId},
+        UPD_DT = NOW()
+    WHERE FAMILY_ID = #{familyId}
+      AND NOTE_SEQ = #{noteSeq}
+      AND DEL_YN = 'N'
+  </update>
+
+</mapper>

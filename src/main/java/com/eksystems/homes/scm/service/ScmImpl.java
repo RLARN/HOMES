@@ -24,7 +24,7 @@ public class ScmImpl implements ScmService {
 
     @Override
     @Transactional
-    public void createDepositRequest(HttpSession session, String familyId, String storeInfo, Long amount, String reason, String requesterId) {
+    public Long createDepositRequest(HttpSession session, String familyId, String storeInfo, Long amount, String reason, String requesterId) {
 
         ScmVO vo = new ScmVO();
         vo.setAmount(amount);
@@ -42,12 +42,20 @@ public class ScmImpl implements ScmService {
                 String.format("%s · %,d원", storeInfo, amount),
                 "/scm/deposit/depositRequest"
         );
+
+        return vo.getDepReqSeq();
     }
 
     @Override
     public List<ScmVO> getDepositRequestList(ScmVO scmVO) {
         return scmMapper.selectDepositRequestList(scmVO);
     }
+
+    @Override
+    public List<ScmVO> searchDepositRequests(String familyId, String keyword) {
+        return scmMapper.searchDepositRequests(familyId, keyword);
+    }
+
     @Override
     public ScmVO getDepositRequestDetail(String familyId, Long depReqSeq) {
         return scmMapper.selectDepositRequestDetail(familyId, depReqSeq);

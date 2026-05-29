@@ -5,11 +5,21 @@ import java.util.Map;
 
 public class ChatRequest {
     private String message;
-    private List<Map<String, Object>> history; // Gemini contents 형식 그대로
+    private List<Map<String, Object>> history;
 
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
+    public String getMessage() {
+        return message;
+    }
 
-    public List<Map<String, Object>> getHistory() { return history; }
-    public void setHistory(List<Map<String, Object>> history) { this.history = history; }
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public List<Map<String, Object>> getHistory() {
+        return history;
+    }
+
+    public void setHistory(List<Map<String, Object>> history) {
+        this.history = history;
+    }
 }
