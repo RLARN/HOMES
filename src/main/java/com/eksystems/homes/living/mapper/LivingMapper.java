@@ -4,6 +4,7 @@ import com.eksystems.homes.living.vo.*;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 public interface LivingMapper {
 
@@ -55,4 +56,15 @@ public interface LivingMapper {
     List<LivingExpenseSummaryVO> selectExpenseSummaryByRange(@Param("familyId") String familyId,
                                                               @Param("fromYymm") String fromYymm,
                                                               @Param("toYymm") String toYymm);
+
+    // ── 수기 현금흐름 전용 (MANUAL_CASHFLOW_MST) ──────────
+    List<ManualCashflowVO> selectManualCfList(@Param("familyId") String familyId,
+                                              @Param("yymm") String yymm);
+    List<ManualCashflowVO> selectManualCfListByRange(@Param("familyId") String familyId,
+                                                     @Param("fromYymm") String fromYymm,
+                                                     @Param("toYymm") String toYymm);
+    void insertManualCf(ManualCashflowVO vo);
+    void updateManualCf(ManualCashflowVO vo);
+    void deleteManualCf(@Param("familyId") String familyId,
+                        @Param("cfSeq") Long cfSeq);
 }

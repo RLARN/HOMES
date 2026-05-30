@@ -143,10 +143,10 @@
                         <td class="text-muted small text-nowrap">${cf.regDtStr}</td>
                         <td class="text-center text-nowrap">
                           <button class="btn btn-sm btn-link p-0 text-muted me-1"
-                                  onclick="openModal(${cf.incomeSeq}, ${cf.ccSeq}, '${cf.flowType}', ${cf.actualAmt}, '<c:out value="${cf.title}"/>', '<c:out value="${cf.memo}"/>')"
+                                  onclick="openModal(${cf.cfSeq}, ${cf.ccSeq}, '${cf.flowType}', ${cf.actualAmt}, '<c:out value="${cf.title}"/>', '<c:out value="${cf.memo}"/>')"
                                   title="수정">✏️</button>
                           <button class="btn btn-sm btn-link p-0 text-danger"
-                                  onclick="deleteCf(${cf.incomeSeq})"
+                                  onclick="deleteCf(${cf.cfSeq})"
                                   title="삭제">🗑</button>
                         </td>
                       </tr>
@@ -304,13 +304,13 @@ function saveCf() {
   if (!title)  { alert('제목을 입력하세요.'); return; }
   const flowType = document.querySelector('input[name="cfFlowType"]:checked').value;
   const payload  = {
-    incomeSeq:   document.getElementById('cfSeq').value || null,
-    ccSeq:       ccSeq,
-    title:       title,
-    flowType:    flowType,
-    incomeYymm:  yymm,
-    actualAmt:   amt,
-    memo:        document.getElementById('cfMemo').value.trim()
+    cfSeq:     document.getElementById('cfSeq').value || null,
+    ccSeq:     ccSeq,
+    title:     title,
+    flowType:  flowType,
+    flowYymm:  yymm,
+    actualAmt: amt,
+    memo:      document.getElementById('cfMemo').value.trim()
   };
   fetch(ctx + '/living/cashflow/save', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -325,7 +325,7 @@ function deleteCf(seq) {
   if (!confirm('삭제하시겠습니까?')) return;
   fetch(ctx + '/living/cashflow/delete', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({incomeSeq: seq})
+    body: JSON.stringify({cfSeq: seq})
   }).then(r => r.json()).then(res => {
     if (res.success) location.reload();
     else alert('실패: ' + (res.message || ''));

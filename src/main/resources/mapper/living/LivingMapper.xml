@@ -331,6 +331,77 @@
           AND INCOME_SEQ = #{incomeSeq}
     </update>
 
+    <!-- ==================== 수기 현금흐름 전용 (MANUAL_CASHFLOW_MST) ==================== -->
+
+    <resultMap id="ManualCfMap" type="com.eksystems.homes.living.vo.ManualCashflowVO">
+        <id  property="cfSeq"      column="CF_SEQ"/>
+        <result property="familyId"    column="FAMILY_ID"/>
+        <result property="ccSeq"       column="CC_SEQ"/>
+        <result property="ccNm"        column="CC_NM"/>
+        <result property="flowType"    column="FLOW_TYPE"/>
+        <result property="flowYymm"    column="FLOW_YYMM"/>
+        <result property="title"       column="TITLE"/>
+        <result property="actualAmt"   column="ACTUAL_AMT"/>
+        <result property="memo"        column="MEMO"/>
+        <result property="regId"       column="REG_ID"/>
+        <result property="regDt"       column="REG_DT"/>
+        <result property="regDtStr"    column="REG_DT_STR"/>
+        <result property="updId"       column="UPD_ID"/>
+        <result property="updDt"       column="UPD_DT"/>
+    </resultMap>
+
+    <select id="selectManualCfList" resultMap="ManualCfMap">
+        SELECT c.CF_SEQ, c.FAMILY_ID, c.CC_SEQ,
+               cc.CC_NM, c.FLOW_TYPE, c.FLOW_YYMM, c.TITLE, c.ACTUAL_AMT, c.MEMO,
+               c.REG_ID, c.REG_DT, DATE_FORMAT(c.REG_DT, '%Y-%m-%d') AS REG_DT_STR,
+               c.UPD_ID, c.UPD_DT
+        FROM MANUAL_CASHFLOW_MST c
+        JOIN COST_CENTER_MST cc ON cc.CC_SEQ = c.CC_SEQ
+        WHERE c.FAMILY_ID = #{familyId}
+          AND c.FLOW_YYMM = #{yymm}
+        ORDER BY c.FLOW_TYPE DESC, cc.SORT_ORDER, c.CC_SEQ, c.CF_SEQ
+    </select>
+
+    <select id="selectManualCfListByRange" resultMap="ManualCfMap">
+        SELECT c.CF_SEQ, c.FAMILY_ID, c.CC_SEQ,
+               cc.CC_NM, c.FLOW_TYPE, c.FLOW_YYMM, c.TITLE, c.ACTUAL_AMT, c.MEMO,
+               c.REG_ID, c.REG_DT, DATE_FORMAT(c.REG_DT, '%Y-%m-%d') AS REG_DT_STR,
+               c.UPD_ID, c.UPD_DT
+        FROM MANUAL_CASHFLOW_MST c
+        JOIN COST_CENTER_MST cc ON cc.CC_SEQ = c.CC_SEQ
+        WHERE c.FAMILY_ID = #{familyId}
+          AND c.FLOW_YYMM BETWEEN #{fromYymm} AND #{toYymm}
+        ORDER BY c.FLOW_TYPE DESC, cc.SORT_ORDER, c.CC_SEQ, c.CF_SEQ
+    </select>
+
+    <insert id="insertManualCf" useGeneratedKeys="true" keyProperty="cfSeq">
+        INSERT INTO MANUAL_CASHFLOW_MST
+            (FAMILY_ID, CC_SEQ, FLOW_TYPE, FLOW_YYMM, TITLE, ACTUAL_AMT, MEMO, REG_ID, REG_DT, UPD_ID, UPD_DT)
+        VALUES
+            (#{familyId}, #{ccSeq}, COALESCE(#{flowType}, 'INCOME'), #{flowYymm},
+             #{title}, #{actualAmt}, #{memo}, #{regId}, NOW(), #{updId}, NOW())
+    </insert>
+
+    <update id="updateManualCf">
+        UPDATE MANUAL_CASHFLOW_MST
+        SET CC_SEQ     = #{ccSeq},
+            FLOW_TYPE  = #{flowType},
+            FLOW_YYMM  = #{flowYymm},
+            TITLE      = #{title},
+            ACTUAL_AMT = #{actualAmt},
+            MEMO       = #{memo},
+            UPD_ID     = #{updId},
+            UPD_DT     = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND CF_SEQ    = #{cfSeq}
+    </update>
+
+    <delete id="deleteManualCf">
+        DELETE FROM MANUAL_CASHFLOW_MST
+        WHERE FAMILY_ID = #{familyId}
+          AND CF_SEQ    = #{cfSeq}
+    </delete>
+
     <!-- ==================== 재무제표 명세용 ==================== -->
 
     <resultMap id="ExpenseSummaryMap" type="com.eksystems.homes.living.vo.LivingExpenseSummaryVO">

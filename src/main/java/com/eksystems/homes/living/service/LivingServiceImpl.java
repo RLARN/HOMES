@@ -185,6 +185,36 @@ public class LivingServiceImpl implements LivingService {
         return livingMapper.selectManualCashflowList(familyId, yymm);
     }
 
+    // ── 수기 현금흐름 전용 (MANUAL_CASHFLOW_MST) ──────────
+
+    @Override
+    public List<ManualCashflowVO> getManualCfList(String familyId, String yymm) {
+        return livingMapper.selectManualCfList(familyId, yymm);
+    }
+
+    @Override
+    public List<ManualCashflowVO> getManualCfListByRange(String familyId, String fromYymm, String toYymm) {
+        return livingMapper.selectManualCfListByRange(familyId, fromYymm, toYymm);
+    }
+
+    @Override
+    @Transactional
+    public void saveManualCf(ManualCashflowVO vo, String userId) {
+        vo.setRegId(userId);
+        vo.setUpdId(userId);
+        if (vo.getCfSeq() == null) {
+            livingMapper.insertManualCf(vo);
+        } else {
+            livingMapper.updateManualCf(vo);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteManualCf(String familyId, Long cfSeq) {
+        livingMapper.deleteManualCf(familyId, cfSeq);
+    }
+
     @Override
     public List<LivingBudgetItemVO> getAllItemList(String familyId) {
         return livingMapper.selectAllItemList(familyId);

@@ -1,0 +1,36 @@
+-- =====================================================
+-- HOMES 수기 현금흐름 전용 테이블
+-- charset: utf8mb4
+-- =====================================================
+-- 기존 LIVING_INCOME_MST 는 단건(CC당 월1건) 제약이 있어
+-- 수기 전표 성격의 다건 등록이 불가능하므로 전용 테이블 분리
+
+CREATE TABLE IF NOT EXISTS MANUAL_CASHFLOW_MST (
+    CF_SEQ      BIGINT       AUTO_INCREMENT PRIMARY KEY,
+    FAMILY_ID   VARCHAR(30)  NOT NULL,
+    CC_SEQ      BIGINT       NOT NULL               COMMENT 'FK → COST_CENTER_MST',
+    FLOW_TYPE   VARCHAR(10)  NOT NULL DEFAULT 'INCOME' COMMENT 'INCOME / EXPENSE',
+    FLOW_YYMM   CHAR(6)      NOT NULL               COMMENT '년월 YYYYMM',
+    TITLE       VARCHAR(200) NOT NULL               COMMENT '전표 제목',
+    ACTUAL_AMT  BIGINT       NOT NULL DEFAULT 0     COMMENT '금액',
+    MEMO        VARCHAR(500),
+    REG_ID      VARCHAR(30),
+    REG_DT      DATETIME     NOT NULL DEFAULT NOW(),
+    UPD_ID      VARCHAR(30),
+    UPD_DT      DATETIME
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='수기 현금흐름 전표 (건별 다건 등록 가능)';
+
+CREATE INDEX IF NOT EXISTS IDX_MANUAL_CF_FAMILY
+    ON MANUAL_CASHFLOW_MST (FAMILY_ID, FLOW_YYMM, FLOW_TYPE);
+
+-- 기존 LIVING_INCOME_MST 데이터 이관 (최초 1회 실행)
+-- TITLE, FLOW_TYPE 컬럼이 이미 추가되어 있는 경우:
+-- INSERT INTO MANUAL_CASHFLOW_MST
+--     (FAMILY_ID, CC_SEQ, FLOW_TYPE, FLOW_YYMM, TITLE, ACTUAL_AMT, MEMO, REG_ID, REG_DT, UPD_ID, UPD_DT)
+-- SELECT FAMILY_ID, CC_SEQ,
+--        COALESCE(FLOW_TYPE, 'INCOME'),
+--        INCOME_YYMM,
+--        COALESCE(TITLE, '(이관)'),
+--        ACTUAL_AMT, MEMO, REG_ID, REG_DT, UPD_ID, UPD_DT
+-- FROM LIVING_INCOME_MST;

@@ -5,6 +5,7 @@ import com.eksystems.homes.asset.service.CostCenterService;
 import com.eksystems.homes.asset.vo.CostCenterVO;
 import com.eksystems.homes.living.service.LivingService;
 import com.eksystems.homes.living.vo.*;
+import com.eksystems.homes.living.vo.ManualCashflowVO;
 import com.eksystems.homes.login.vo.LoginVO;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -156,8 +157,8 @@ public class LivingController {
         if (yymm == null || yymm.isBlank()) {
             yymm = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
         }
-        List<LivingIncomeMstVO> list = livingService.getManualCashflowList(familyId, yymm);
-        List<CostCenterVO> ccList    = costCenterService.getList(familyId, "Y");
+        List<ManualCashflowVO> list = livingService.getManualCfList(familyId, yymm);
+        List<CostCenterVO> ccList   = costCenterService.getList(familyId, "Y");
 
         long incomeTotal  = list.stream().filter(i -> "INCOME".equals(i.getFlowType()))
                 .mapToLong(i -> i.getActualAmt() != null ? i.getActualAmt() : 0L).sum();
@@ -179,11 +180,11 @@ public class LivingController {
     /** 수기 현금흐름 저장 (AJAX) */
     @PostMapping("/cashflow/save")
     @ResponseBody
-    public Map<String, Object> saveCashflow(@RequestBody LivingIncomeMstVO vo, HttpSession session) {
+    public Map<String, Object> saveCashflow(@RequestBody ManualCashflowVO vo, HttpSession session) {
         try {
             LoginVO login = login(session);
             vo.setFamilyId(login.getFamilyId());
-            livingService.saveIncome(vo, login.getUserId());
+            livingService.saveManualCf(vo, login.getUserId());
             return Map.of("success", true);
         } catch (Exception e) {
             return Map.of("success", false, "message", e.getMessage());
@@ -196,8 +197,8 @@ public class LivingController {
     public Map<String, Object> deleteCashflow(@RequestBody Map<String, Object> body, HttpSession session) {
         try {
             LoginVO login = login(session);
-            Long incomeSeq = Long.valueOf(body.get("incomeSeq").toString());
-            livingService.deleteIncome(login.getFamilyId(), incomeSeq);
+            Long cfSeq = Long.valueOf(body.get("cfSeq").toString());
+            livingService.deleteManualCf(login.getFamilyId(), cfSeq);
             return Map.of("success", true);
         } catch (Exception e) {
             return Map.of("success", false, "message", e.getMessage());

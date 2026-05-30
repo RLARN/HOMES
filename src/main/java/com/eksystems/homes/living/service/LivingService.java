@@ -37,7 +37,14 @@ public interface LivingService {
     void deleteIncome(String familyId, Long incomeSeq);
 
     // ── 수기 현금흐름 (INCOME/EXPENSE) ───────────────────
+    /** @deprecated LIVING_INCOME_MST 기반, FinancialController 이전 완료 시 제거 예정 */
     List<LivingIncomeMstVO> getManualCashflowList(String familyId, String yymm);
+
+    // ── 수기 현금흐름 전용 (MANUAL_CASHFLOW_MST) ──────────
+    List<ManualCashflowVO> getManualCfList(String familyId, String yymm);
+    List<ManualCashflowVO> getManualCfListByRange(String familyId, String fromYymm, String toYymm);
+    void saveManualCf(ManualCashflowVO vo, String userId);
+    void deleteManualCf(String familyId, Long cfSeq);
 
     // ── 재무제표 명세용 ───────────────────────────────────
     List<LivingBudgetItemVO> getAllItemList(String familyId);

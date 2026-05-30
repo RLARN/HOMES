@@ -12,6 +12,7 @@ import com.eksystems.homes.asset.vo.LoanVO;
 import com.eksystems.homes.living.service.LivingService;
 import com.eksystems.homes.living.vo.LivingExpenseSummaryVO;
 import com.eksystems.homes.living.vo.LivingIncomeMstVO;
+import com.eksystems.homes.living.vo.ManualCashflowVO;
 import com.eksystems.homes.login.vo.LoginVO;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -101,21 +102,21 @@ public class FinancialController {
             ccList = costCenterService.getStatusList(familyId, fromYymm, toYymm);
         }
 
-        // 수기 현금흐름 (INCOME + EXPENSE) 전체 — CC_SEQ 기준 그룹핑
-        List<LivingIncomeMstVO> allManualEntries = livingService.getIncomeListByRange(familyId, fromYymm, toYymm);
-        List<LivingIncomeMstVO> incomeEntries    = allManualEntries.stream()
+        // 수기 현금흐름 (INCOME + EXPENSE) 전체 — CC_SEQ 기준 그룹핑 (MANUAL_CASHFLOW_MST)
+        List<ManualCashflowVO> allManualEntries = livingService.getManualCfListByRange(familyId, fromYymm, toYymm);
+        List<ManualCashflowVO> incomeEntries    = allManualEntries.stream()
                 .filter(i -> "INCOME".equals(i.getFlowType())).toList();
-        List<LivingIncomeMstVO> expenseEntries   = allManualEntries.stream()
+        List<ManualCashflowVO> expenseEntries   = allManualEntries.stream()
                 .filter(i -> "EXPENSE".equals(i.getFlowType())).toList();
 
         Map<Long, Long> manualIncomeByCC = incomeEntries.stream()
                 .collect(Collectors.groupingBy(
-                        LivingIncomeMstVO::getCcSeq,
+                        ManualCashflowVO::getCcSeq,
                         Collectors.summingLong(i -> i.getActualAmt() != null ? i.getActualAmt() : 0L)
                 ));
         Map<Long, Long> manualExpenseByCC = expenseEntries.stream()
                 .collect(Collectors.groupingBy(
-                        LivingIncomeMstVO::getCcSeq,
+                        ManualCashflowVO::getCcSeq,
                         Collectors.summingLong(i -> i.getActualAmt() != null ? i.getActualAmt() : 0L)
                 ));
 
@@ -181,10 +182,10 @@ public class FinancialController {
                                 com.eksystems.homes.living.vo.LivingBudgetItemVO::getCcSeq));
 
         // CC_SEQ 기준 수기 수입/지출 그룹핑
-        Map<Long, List<LivingIncomeMstVO>> manualIncListByCC = incomeEntries.stream()
-                .collect(Collectors.groupingBy(LivingIncomeMstVO::getCcSeq));
-        Map<Long, List<LivingIncomeMstVO>> manualExpListByCC = expenseEntries.stream()
-                .collect(Collectors.groupingBy(LivingIncomeMstVO::getCcSeq));
+        Map<Long, List<ManualCashflowVO>> manualIncListByCC = incomeEntries.stream()
+                .collect(Collectors.groupingBy(ManualCashflowVO::getCcSeq));
+        Map<Long, List<ManualCashflowVO>> manualExpListByCC = expenseEntries.stream()
+                .collect(Collectors.groupingBy(ManualCashflowVO::getCcSeq));
 
         // ── [참고] 재무상태표 ─────────────────────────────────
         List<AssetVO>  assetList = assetService.getAssetList(familyId, "N");
