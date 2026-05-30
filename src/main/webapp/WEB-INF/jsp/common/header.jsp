@@ -15,9 +15,9 @@
     </a>
 
     <div class="ms-auto d-flex align-items-center gap-2">
-      <a class="btn btn-sm btn-outline-light homes-pill"
+      <a class="btn btn-sm btn-outline-light homes-pill homes-ai-btn"
          href="${pageContext.request.contextPath}/assistant"
-         title="AI Assistant">AI Assistant</a>
+         title="AI Assistant">H-Ops AI</a>
 
       <!-- 알림 구독 버튼 -->
       <button id="pushBellBtn"
@@ -73,6 +73,79 @@
 	}
 	.homes-pill { border-radius: 999px; }
 	.homes-logo-icon { width: 28px; height: 28px; object-fit: contain; }
+	.homes-ai-btn {
+	  position: relative;
+	  isolation: isolate;
+	  overflow: hidden;
+	  color: #fff !important;
+	  border-color: rgba(255,255,255,.38);
+	  background:
+	    linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.05)),
+	    linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 46%, #0e7490 100%);
+	  box-shadow:
+	    0 0 0 1px rgba(255,255,255,.08) inset,
+	    0 8px 18px rgba(14, 116, 144, .18),
+	    0 4px 10px rgba(30, 58, 138, .24);
+	  transition:
+	    color .2s ease,
+	    border-color .2s ease,
+	    background-position .35s ease,
+	    box-shadow .25s ease,
+	    transform .25s ease;
+	}
+	.homes-ai-btn::before {
+	  content: "";
+	  position: absolute;
+	  inset: -1px;
+	  z-index: -2;
+	  background: linear-gradient(120deg, #38bdf8, #2563eb, #1e3a8a, #38bdf8);
+	  background-size: 220% 220%;
+	  opacity: .58;
+	  transition: opacity .25s ease, filter .25s ease;
+	}
+	.homes-ai-btn::after {
+	  content: "";
+	  position: absolute;
+	  top: -60%;
+	  bottom: -60%;
+	  left: -45%;
+	  width: 38%;
+	  z-index: -1;
+	  background: linear-gradient(90deg, transparent, rgba(255,255,255,.48), transparent);
+	  transform: translateX(-130%) rotate(18deg);
+	  transition: transform .55s cubic-bezier(.2,.8,.2,1);
+	}
+	.homes-ai-btn:hover,
+	.homes-ai-btn:focus-visible {
+	  color: #fff !important;
+	  border-color: rgba(255,255,255,.72);
+	  transform: translateY(-1px);
+	  box-shadow:
+	    0 0 0 1px rgba(255,255,255,.18) inset,
+	    0 0 22px rgba(56, 189, 248, .34),
+	    0 10px 24px rgba(30, 58, 138, .38);
+	}
+	.homes-ai-btn:hover::before,
+	.homes-ai-btn:focus-visible::before {
+	  opacity: .92;
+	  filter: saturate(1.25);
+	  animation: homesAiAura 2.4s linear infinite;
+	}
+	.homes-ai-btn:hover::after,
+	.homes-ai-btn:focus-visible::after {
+	  transform: translateX(420%) rotate(18deg);
+	}
+	.homes-ai-btn:active {
+	  color: #fff !important;
+	  transform: translateY(0);
+	  box-shadow:
+	    0 0 0 1px rgba(255,255,255,.20) inset,
+	    0 4px 12px rgba(30, 58, 138, .30);
+	}
+	@keyframes homesAiAura {
+	  0% { background-position: 0% 50%; }
+	  100% { background-position: 220% 50%; }
+	}
 
 	/* =========================
 	   Sidebar

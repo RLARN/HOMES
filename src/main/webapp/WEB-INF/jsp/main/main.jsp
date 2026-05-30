@@ -59,37 +59,6 @@
             <div class="card-body">
               <div class="d-flex align-items-start justify-content-between">
                 <div>
-                  <div class="text-muted small">이번달 입금 요청 금액</div>
-				  <div class="h4 mb-1 fw-bold">
-				    <fmt:formatNumber value="${requestedTotal}" pattern="#,##0" />원
-				  </div>
-                  <div class="small text-muted">전월 대비 <span class="text-success fw-semibold">12% 증가</span></div>
-                </div>
-                <div class="homes-badge">Budget</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-12 col-md-6 col-xl-3">
-          <div class="card homes-card">
-            <div class="card-body">
-              <div class="d-flex align-items-start justify-content-between">
-                <div>
-                  <div class="text-muted small">결재 대기</div>
-                  <div class="h4 mb-1 fw-bold">${requestedStandbyCount}</div>
-                  <div class="small text-muted">처리 필요</div>
-                </div>
-                <div class="homes-badge">APPROVAL</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-          <div class="card homes-card">
-            <div class="card-body">
-              <div class="d-flex align-items-start justify-content-between">
-                <div>
                   <div class="text-muted small">총 자산</div>
                   <div class="h4 mb-1 fw-bold">8,223,000,000 KRW</div>
                   <div class="small text-muted">전월 대비 <span class="text-success fw-semibold">21% 증가</span></div>
@@ -99,6 +68,7 @@
             </div>
           </div>
         </div>
+
         <div class="col-12 col-md-6 col-xl-3">
           <div class="card homes-card">
             <div class="card-body">
@@ -106,23 +76,9 @@
                 <div>
                   <div class="text-muted small">연간 자산 증가율</div>
                   <div class="h4 mb-1 fw-bold">21.38%</div>
-                  <div class="small text-muted">전년 대비 <span class="text-success fw-semibold">424,000,000 KRW 증가</span></div>
+                  <div class="small text-muted">전년 대비 <span class="text-success fw-semibold">+424,000,000 KRW</span></div>
                 </div>
                 <div class="homes-badge">Asset</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-          <div class="card homes-card">
-            <div class="card-body">
-              <div class="d-flex align-items-start justify-content-between">
-                <div>
-                  <div class="text-muted small">이번주 일정</div>
-                  <div class="h4 mb-1 fw-bold">3</div>
-                  <div class="small text-muted">Google 연동 예정</div>
-                </div>
-                <div class="homes-badge">CAL</div>
               </div>
             </div>
           </div>
@@ -133,11 +89,26 @@
             <div class="card-body">
               <div class="d-flex align-items-start justify-content-between">
                 <div>
-                  <div class="text-muted small">새 메모</div>
-                  <div class="h4 mb-1 fw-bold">1</div>
-                  <div class="small text-muted">오늘 작성</div>
+                  <div class="text-muted small">이번달 지출</div>
+                  <div class="h4 mb-1 fw-bold">3,450,000 KRW</div>
+                  <div class="small text-muted">전월 대비 <span class="text-danger fw-semibold">8% 증가</span></div>
                 </div>
-                <div class="homes-badge">note</div>
+                <div class="homes-badge">Spend</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+          <div class="card homes-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start justify-content-between">
+                <div>
+                  <div class="text-muted small">월 저축률</div>
+                  <div class="h4 mb-1 fw-bold">34.2%</div>
+                  <div class="small text-muted">목표 대비 <span class="text-success fw-semibold">+4.2%p 초과</span></div>
+                </div>
+                <div class="homes-badge">Save</div>
               </div>
             </div>
           </div>

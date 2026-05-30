@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.asset.mapper.AssetMapper">
+
+    <!-- ===================== 자산형태 코드 ===================== -->
+
+    <select id="selectAssetTypeList" resultType="com.eksystems.homes.asset.vo.AssetVO">
+        SELECT
+            ASSET_TYPE    AS assetType,
+            ASSET_TYPE_NM AS assetTypeNm
+        FROM ASSET_TYPE_CD
+        WHERE USE_YN = 'Y'
+        ORDER BY SORT_ORDER
+    </select>
+
+    <!-- ===================== 자산원장 ===================== -->
+
+    <resultMap id="AssetMap" type="com.eksystems.homes.asset.vo.AssetVO">
+        <id  property="assetSeq"      column="ASSET_SEQ"/>
+        <result property="familyId"   column="FAMILY_ID"/>
+        <result property="assetNm"    column="ASSET_NM"/>
+        <result property="assetType"  column="ASSET_TYPE"/>
+        <result property="assetTypeNm" column="ASSET_TYPE_NM"/>
+        <result property="liquidYn"   column="LIQUID_YN"/>
+        <result property="amount"     column="AMOUNT"/>
+        <result property="memo"            column="MEMO"/>
+        <result property="expectedRate"    column="EXPECTED_RATE"/>
+        <result property="rateCycleNum"    column="RATE_CYCLE_NUM"/>
+        <result property="rateCycleUnit"   column="RATE_CYCLE_UNIT"/>
+        <result property="delYn"           column="DEL_YN"/>
+        <result property="disposeYn"  column="DISPOSE_YN"/>
+        <result property="disposeYmd" column="DISPOSE_YMD"/>
+        <result property="disposeReason" column="DISPOSE_REASON"/>
+        <result property="regId"      column="REG_ID"/>
+        <result property="regDt"      column="REG_DT"/>
+        <result property="updId"      column="UPD_ID"/>
+        <result property="updDt"      column="UPD_DT"/>
+        <result property="updDtStr"   column="UPD_DT_STR"/>
+    </resultMap>
+
+    <select id="selectAssetList" resultMap="AssetMap">
+        SELECT
+            a.ASSET_SEQ,
+            a.FAMILY_ID,
+            a.ASSET_NM,
+            a.ASSET_TYPE,
+            t.ASSET_TYPE_NM,
+            a.LIQUID_YN,
+            a.AMOUNT,
+            a.MEMO,
+            a.EXPECTED_RATE,
+            a.RATE_CYCLE_NUM,
+            a.RATE_CYCLE_UNIT,
+            a.DEL_YN,
+            a.DISPOSE_YN,
+            a.DISPOSE_YMD,
+            a.DISPOSE_REASON,
+            a.REG_ID,
+            a.REG_DT,
+            a.UPD_ID,
+            a.UPD_DT,
+            DATE_FORMAT(a.UPD_DT, '%Y-%m-%d') AS UPD_DT_STR
+        FROM ASSET_MST a
+        LEFT JOIN ASSET_TYPE_CD t ON a.ASSET_TYPE = t.ASSET_TYPE
+        WHERE a.FAMILY_ID = #{familyId}
+          AND a.DEL_YN = 'N'
+        <if test="disposeYn != null and disposeYn != ''">
+          AND a.DISPOSE_YN = #{disposeYn}
+        </if>
+        ORDER BY a.DISPOSE_YN ASC, a.ASSET_SEQ DESC
+    </select>
+
+    <select id="selectAssetDetail" resultMap="AssetMap">
+        SELECT
+            a.ASSET_SEQ,
+            a.FAMILY_ID,
+            a.ASSET_NM,
+            a.ASSET_TYPE,
+            t.ASSET_TYPE_NM,
+            a.LIQUID_YN,
+            a.AMOUNT,
+            a.MEMO,
+            a.EXPECTED_RATE,
+            a.RATE_CYCLE_NUM,
+            a.RATE_CYCLE_UNIT,
+            a.DEL_YN,
+            a.DISPOSE_YN,
+            a.DISPOSE_YMD,
+            a.DISPOSE_REASON,
+            a.REG_ID,
+            a.REG_DT,
+            a.UPD_ID,
+            a.UPD_DT,
+            DATE_FORMAT(a.UPD_DT, '%Y-%m-%d') AS UPD_DT_STR
+        FROM ASSET_MST a
+        LEFT JOIN ASSET_TYPE_CD t ON a.ASSET_TYPE = t.ASSET_TYPE
+        WHERE a.FAMILY_ID = #{familyId}
+          AND a.ASSET_SEQ = #{assetSeq}
+          AND a.DEL_YN = 'N'
+    </select>
+
+    <insert id="insertAsset" parameterType="com.eksystems.homes.asset.vo.AssetVO"
+            useGeneratedKeys="true" keyProperty="assetSeq">
+        INSERT INTO ASSET_MST (
+            FAMILY_ID, ASSET_NM, ASSET_TYPE, LIQUID_YN, AMOUNT, MEMO,
+            EXPECTED_RATE, RATE_CYCLE_NUM, RATE_CYCLE_UNIT,
+            DEL_YN, DISPOSE_YN, DISPOSE_YMD, DISPOSE_REASON,
+            REG_ID, REG_DT, UPD_ID, UPD_DT
+        ) VALUES (
+            #{familyId}, #{assetNm}, #{assetType}, #{liquidYn}, #{amount}, #{memo},
+            #{expectedRate}, #{rateCycleNum}, #{rateCycleUnit},
+            'N',
+            <choose>
+                <when test="disposeYn != null">#{disposeYn}</when>
+                <otherwise>'N'</otherwise>
+            </choose>,
+            #{disposeYmd}, #{disposeReason},
+            #{regId}, NOW(), #{updId}, NOW()
+        )
+    </insert>
+
+    <update id="updateAsset" parameterType="com.eksystems.homes.asset.vo.AssetVO">
+        UPDATE ASSET_MST
+        SET
+            ASSET_NM       = #{assetNm},
+            ASSET_TYPE     = #{assetType},
+            LIQUID_YN      = #{liquidYn},
+            AMOUNT         = #{amount},
+            MEMO           = #{memo},
+            EXPECTED_RATE  = #{expectedRate},
+            RATE_CYCLE_NUM = #{rateCycleNum},
+            RATE_CYCLE_UNIT = #{rateCycleUnit},
+            DISPOSE_YN     = #{disposeYn},
+            DISPOSE_YMD    = #{disposeYmd},
+            DISPOSE_REASON = #{disposeReason},
+            UPD_ID         = #{updId},
+            UPD_DT         = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND ASSET_SEQ = #{assetSeq}
+          AND DEL_YN    = 'N'
+    </update>
+
+    <update id="deleteAsset">
+        UPDATE ASSET_MST
+        SET DEL_YN = 'Y',
+            UPD_ID = #{updId},
+            UPD_DT = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND ASSET_SEQ = #{assetSeq}
+    </update>
+
+    <!-- ===================== 대출원장 ===================== -->
+
+    <resultMap id="LoanMap" type="com.eksystems.homes.asset.vo.LoanVO">
+        <id  property="loanSeq"        column="LOAN_SEQ"/>
+        <result property="familyId"    column="FAMILY_ID"/>
+        <result property="loanNm"      column="LOAN_NM"/>
+        <result property="loanAmount"  column="LOAN_AMOUNT"/>
+        <result property="currentBalance" column="CURRENT_BALANCE"/>
+        <result property="interestRate"   column="INTEREST_RATE"/>
+        <result property="loanMonths"     column="LOAN_MONTHS"/>
+        <result property="startYmd"    column="START_YMD"/>
+        <result property="endYmd"      column="END_YMD"/>
+        <result property="memo"        column="MEMO"/>
+        <result property="delYn"       column="DEL_YN"/>
+        <result property="closeYn"     column="CLOSE_YN"/>
+        <result property="closeYmd"    column="CLOSE_YMD"/>
+        <result property="closeReason" column="CLOSE_REASON"/>
+        <result property="regId"       column="REG_ID"/>
+        <result property="regDt"       column="REG_DT"/>
+        <result property="updId"       column="UPD_ID"/>
+        <result property="updDt"       column="UPD_DT"/>
+        <result property="updDtStr"    column="UPD_DT_STR"/>
+    </resultMap>
+
+    <select id="selectLoanList" resultMap="LoanMap">
+        SELECT
+            LOAN_SEQ, FAMILY_ID, LOAN_NM,
+            LOAN_AMOUNT, CURRENT_BALANCE, INTEREST_RATE, LOAN_MONTHS,
+            START_YMD, END_YMD, MEMO,
+            DEL_YN, CLOSE_YN, CLOSE_YMD, CLOSE_REASON,
+            REG_ID, REG_DT, UPD_ID, UPD_DT,
+            DATE_FORMAT(UPD_DT, '%Y-%m-%d') AS UPD_DT_STR
+        FROM LOAN_MST
+        WHERE FAMILY_ID = #{familyId}
+          AND DEL_YN = 'N'
+        <if test="closeYn != null and closeYn != ''">
+          AND CLOSE_YN = #{closeYn}
+        </if>
+        ORDER BY CLOSE_YN ASC, LOAN_SEQ DESC
+    </select>
+
+    <select id="selectLoanDetail" resultMap="LoanMap">
+        SELECT
+            LOAN_SEQ, FAMILY_ID, LOAN_NM,
+            LOAN_AMOUNT, CURRENT_BALANCE, INTEREST_RATE, LOAN_MONTHS,
+            START_YMD, END_YMD, MEMO,
+            DEL_YN, CLOSE_YN, CLOSE_YMD, CLOSE_REASON,
+            REG_ID, REG_DT, UPD_ID, UPD_DT,
+            DATE_FORMAT(UPD_DT, '%Y-%m-%d') AS UPD_DT_STR
+        FROM LOAN_MST
+        WHERE FAMILY_ID = #{familyId}
+          AND LOAN_SEQ  = #{loanSeq}
+          AND DEL_YN    = 'N'
+    </select>
+
+    <insert id="insertLoan" parameterType="com.eksystems.homes.asset.vo.LoanVO"
+            useGeneratedKeys="true" keyProperty="loanSeq">
+        INSERT INTO LOAN_MST (
+            FAMILY_ID, LOAN_NM, LOAN_AMOUNT, CURRENT_BALANCE,
+            INTEREST_RATE, LOAN_MONTHS, START_YMD, END_YMD, MEMO,
+            DEL_YN, CLOSE_YN, CLOSE_YMD, CLOSE_REASON,
+            REG_ID, REG_DT, UPD_ID, UPD_DT
+        ) VALUES (
+            #{familyId}, #{loanNm}, #{loanAmount}, #{currentBalance},
+            #{interestRate}, #{loanMonths}, #{startYmd}, #{endYmd}, #{memo},
+            'N',
+            <choose>
+                <when test="closeYn != null">#{closeYn}</when>
+                <otherwise>'N'</otherwise>
+            </choose>,
+            #{closeYmd}, #{closeReason},
+            #{regId}, NOW(), #{updId}, NOW()
+        )
+    </insert>
+
+    <update id="updateLoan" parameterType="com.eksystems.homes.asset.vo.LoanVO">
+        UPDATE LOAN_MST
+        SET
+            LOAN_NM         = #{loanNm},
+            LOAN_AMOUNT     = #{loanAmount},
+            CURRENT_BALANCE = #{currentBalance},
+            INTEREST_RATE   = #{interestRate},
+            LOAN_MONTHS     = #{loanMonths},
+            START_YMD       = #{startYmd},
+            END_YMD         = #{endYmd},
+            MEMO            = #{memo},
+            CLOSE_YN        = #{closeYn},
+            CLOSE_YMD       = #{closeYmd},
+            CLOSE_REASON    = #{closeReason},
+            UPD_ID          = #{updId},
+            UPD_DT          = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND LOAN_SEQ  = #{loanSeq}
+          AND DEL_YN    = 'N'
+    </update>
+
+    <update id="deleteLoan">
+        UPDATE LOAN_MST
+        SET DEL_YN = 'Y',
+            UPD_ID = #{updId},
+            UPD_DT = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND LOAN_SEQ  = #{loanSeq}
+    </update>
+
+    <!-- ===================== 요약 뷰 ===================== -->
+
+    <resultMap id="AssetSummaryMap" type="com.eksystems.homes.asset.vo.AssetSummaryVO">
+        <result property="familyId"                column="FAMILY_ID"/>
+        <result property="totalAssetAmount"         column="TOTAL_ASSET_AMOUNT"/>
+        <result property="totalLiquidAssetAmount"   column="TOTAL_LIQUID_ASSET_AMOUNT"/>
+        <result property="totalFixedAssetAmount"    column="TOTAL_FIXED_ASSET_AMOUNT"/>
+        <result property="totalInvestAmount"        column="TOTAL_INVEST_AMOUNT"/>
+        <result property="totalLoanBalance"         column="TOTAL_LOAN_BALANCE"/>
+        <result property="netAssetAmount"           column="NET_ASSET_AMOUNT"/>
+        <result property="monthlyIncomeAmount"      column="MONTHLY_INCOME_AMOUNT"/>
+        <result property="monthlyExpenseAmount"     column="MONTHLY_EXPENSE_AMOUNT"/>
+        <result property="monthlySavingAmount"      column="MONTHLY_SAVING_AMOUNT"/>
+        <result property="monthlyInvestAmount"      column="MONTHLY_INVEST_AMOUNT"/>
+        <result property="expectedMonthlyCashFlow"  column="EXPECTED_MONTHLY_CASH_FLOW"/>
+    </resultMap>
+
+    <!-- 예측 계산용 -->
+    <select id="selectAssetsForForecast" resultMap="AssetMap">
+        SELECT
+            a.ASSET_SEQ, a.FAMILY_ID, a.ASSET_NM, a.ASSET_TYPE,
+            a.LIQUID_YN, a.AMOUNT,
+            a.EXPECTED_RATE, a.RATE_CYCLE_NUM, a.RATE_CYCLE_UNIT,
+            a.DEL_YN, a.DISPOSE_YN
+        FROM ASSET_MST a
+        WHERE a.FAMILY_ID  = #{familyId}
+          AND a.DEL_YN     = 'N'
+          AND a.DISPOSE_YN = 'N'
+          AND a.EXPECTED_RATE IS NOT NULL
+          AND a.EXPECTED_RATE != 0
+    </select>
+
+    <!-- AI 검색 -->
+    <select id="searchAssets" resultMap="AssetMap">
+        SELECT
+            a.ASSET_SEQ, a.FAMILY_ID, a.ASSET_NM, a.ASSET_TYPE,
+            t.ASSET_TYPE_NM, a.LIQUID_YN, a.AMOUNT,
+            a.MEMO, a.DEL_YN, a.DISPOSE_YN, a.DISPOSE_YMD,
+            a.REG_ID, a.UPD_ID, a.UPD_DT,
+            DATE_FORMAT(a.UPD_DT,'%Y-%m-%d') AS UPD_DT_STR
+        FROM ASSET_MST a
+        LEFT JOIN ASSET_TYPE_CD t ON a.ASSET_TYPE = t.ASSET_TYPE
+        WHERE a.FAMILY_ID = #{familyId}
+          AND a.DEL_YN = 'N'
+          AND (
+              a.ASSET_NM   LIKE CONCAT('%',#{keyword},'%')
+           OR t.ASSET_TYPE_NM LIKE CONCAT('%',#{keyword},'%')
+           OR a.MEMO       LIKE CONCAT('%',#{keyword},'%')
+          )
+        ORDER BY a.DISPOSE_YN ASC, a.ASSET_SEQ DESC
+        LIMIT 15
+    </select>
+
+    <select id="searchLoans" resultMap="LoanMap">
+        SELECT
+            LOAN_SEQ, FAMILY_ID, LOAN_NM,
+            LOAN_AMOUNT, CURRENT_BALANCE, INTEREST_RATE, LOAN_MONTHS,
+            START_YMD, END_YMD, MEMO,
+            DEL_YN, CLOSE_YN, CLOSE_YMD, CLOSE_REASON,
+            REG_ID, UPD_ID, UPD_DT,
+            DATE_FORMAT(UPD_DT,'%Y-%m-%d') AS UPD_DT_STR
+        FROM LOAN_MST
+        WHERE FAMILY_ID = #{familyId}
+          AND DEL_YN = 'N'
+          AND (
+              LOAN_NM  LIKE CONCAT('%',#{keyword},'%')
+           OR MEMO     LIKE CONCAT('%',#{keyword},'%')
+          )
+        ORDER BY CLOSE_YN ASC, LOAN_SEQ DESC
+        LIMIT 15
+    </select>
+
+    <select id="selectAssetSummary" resultMap="AssetSummaryMap">
+        SELECT *
+        FROM V_ASSET_SUMMARY
+        WHERE FAMILY_ID = #{familyId}
+    </select>
+
+    <resultMap id="AssetTypeSummaryMap" type="com.eksystems.homes.asset.vo.AssetTypeSummaryVO">
+        <result property="familyId"    column="FAMILY_ID"/>
+        <result property="assetType"   column="ASSET_TYPE"/>
+        <result property="assetTypeNm" column="ASSET_TYPE_NM"/>
+        <result property="totalAmount" column="TOTAL_AMOUNT"/>
+        <result property="assetCount"  column="ASSET_COUNT"/>
+    </resultMap>
+
+    <select id="selectAssetTypeSummary" resultMap="AssetTypeSummaryMap">
+        SELECT *
+        FROM V_ASSET_TYPE_SUMMARY
+        WHERE FAMILY_ID = #{familyId}
+        ORDER BY TOTAL_AMOUNT DESC
+    </select>
+
+    <!-- 비용센터 선택용: 유동자산 목록 -->
+    <select id="selectLiquidAssets" resultMap="AssetMap">
+        SELECT
+            a.ASSET_SEQ, a.FAMILY_ID, a.ASSET_NM, a.ASSET_TYPE,
+            t.ASSET_TYPE_NM, a.LIQUID_YN, a.AMOUNT,
+            a.DEL_YN, a.DISPOSE_YN
+        FROM ASSET_MST a
+        LEFT JOIN ASSET_TYPE_CD t ON a.ASSET_TYPE = t.ASSET_TYPE
+        WHERE a.FAMILY_ID  = #{familyId}
+          AND a.DEL_YN     = 'N'
+          AND a.DISPOSE_YN = 'N'
+          AND a.LIQUID_YN  = 'Y'
+        ORDER BY a.ASSET_NM
+    </select>
+
+    <!-- 비용센터로 사용 중인지 체크 -->
+    <select id="countCostCenterUsage" resultType="int">
+        SELECT COUNT(*)
+        FROM CASH_FLOW_PLAN_MST
+        WHERE COST_CENTER_TYPE = 'ASSET'
+          AND COST_CENTER_SEQ  = #{assetSeq}
+          AND DEL_YN           = 'N'
+    </select>
+
+</mapper>

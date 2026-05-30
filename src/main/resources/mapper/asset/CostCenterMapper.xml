@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.asset.mapper.CostCenterMapper">
+
+    <resultMap id="CcMap" type="com.eksystems.homes.asset.vo.CostCenterVO">
+        <id  property="ccSeq"          column="CC_SEQ"/>
+        <result property="familyId"        column="FAMILY_ID"/>
+        <result property="ccNm"            column="CC_NM"/>
+        <result property="ccType"          column="CC_TYPE"/>
+        <result property="sourcePlanSeq"   column="SOURCE_PLAN_SEQ"/>
+        <result property="sourceAssetSeq"  column="SOURCE_ASSET_SEQ"/>
+        <result property="incomePlanSeq"   column="INCOME_PLAN_SEQ"/>
+        <result property="incomePlanNm"    column="INCOME_PLAN_NM"/>
+        <result property="monthlyAmt"      column="MONTHLY_AMT"/>
+        <result property="sortOrder"       column="SORT_ORDER"/>
+        <result property="useYn"           column="USE_YN"/>
+        <result property="delYn"           column="DEL_YN"/>
+        <result property="memo"            column="MEMO"/>
+        <result property="regId"           column="REG_ID"/>
+        <result property="regDt"           column="REG_DT"/>
+        <result property="updId"           column="UPD_ID"/>
+        <result property="updDt"           column="UPD_DT"/>
+        <result property="usedCount"       column="USED_COUNT"/>
+    </resultMap>
+
+    <select id="selectList" resultMap="CcMap">
+        SELECT
+            c.CC_SEQ, c.FAMILY_ID, c.CC_NM, c.CC_TYPE,
+            c.SOURCE_PLAN_SEQ, c.INCOME_PLAN_SEQ,
+            p.PLAN_NM AS INCOME_PLAN_NM,
+            c.MONTHLY_AMT, c.SORT_ORDER, c.USE_YN, c.DEL_YN, c.MEMO,
+            c.REG_ID, c.REG_DT, c.UPD_ID, c.UPD_DT,
+            (SELECT COUNT(*) FROM CASH_FLOW_PLAN_MST e
+             WHERE e.COST_CENTER_TYPE = 'CC'
+               AND e.COST_CENTER_SEQ  = c.CC_SEQ
+               AND e.DEL_YN = 'N') AS USED_COUNT
+        FROM COST_CENTER_MST c
+        LEFT JOIN CASH_FLOW_PLAN_MST p ON p.PLAN_SEQ = c.INCOME_PLAN_SEQ AND p.DEL_YN = 'N'
+        WHERE c.FAMILY_ID = #{familyId}
+          AND c.DEL_YN    = 'N'
+        <if test="useYn != null and useYn != ''">
+          AND c.USE_YN = #{useYn}
+        </if>
+        ORDER BY c.CC_TYPE ASC, c.SORT_ORDER ASC, c.CC_SEQ ASC
+    </select>
+
+    <select id="selectOne" resultMap="CcMap">
+        SELECT
+            c.CC_SEQ, c.FAMILY_ID, c.CC_NM, c.CC_TYPE,
+            c.SOURCE_PLAN_SEQ, c.INCOME_PLAN_SEQ,
+            p.PLAN_NM AS INCOME_PLAN_NM,
+            c.MONTHLY_AMT, c.SORT_ORDER, c.USE_YN, c.DEL_YN, c.MEMO,
+            c.REG_ID, c.REG_DT, c.UPD_ID, c.UPD_DT,
+            0 AS USED_COUNT
+        FROM COST_CENTER_MST c
+        LEFT JOIN CASH_FLOW_PLAN_MST p ON p.PLAN_SEQ = c.INCOME_PLAN_SEQ AND p.DEL_YN = 'N'
+        WHERE c.FAMILY_ID = #{familyId}
+          AND c.CC_SEQ    = #{ccSeq}
+          AND c.DEL_YN    = 'N'
+    </select>
+
+    <select id="selectBySourceAsset" resultMap="CcMap">
+        SELECT CC_SEQ, FAMILY_ID, CC_NM, CC_TYPE,
+               SOURCE_PLAN_SEQ, SOURCE_ASSET_SEQ, INCOME_PLAN_SEQ, NULL AS INCOME_PLAN_NM,
+               MONTHLY_AMT, SORT_ORDER, USE_YN, DEL_YN, MEMO,
+               REG_ID, REG_DT, UPD_ID, UPD_DT, 0 AS USED_COUNT
+        FROM COST_CENTER_MST
+        WHERE FAMILY_ID        = #{familyId}
+          AND SOURCE_ASSET_SEQ = #{sourceAssetSeq}
+          AND DEL_YN           = 'N'
+        LIMIT 1
+    </select>
+
+    <select id="selectByIncomePlanSeq" resultMap="CcMap">
+        SELECT CC_SEQ, FAMILY_ID, CC_NM, CC_TYPE,
+               SOURCE_PLAN_SEQ, SOURCE_ASSET_SEQ, INCOME_PLAN_SEQ, NULL AS INCOME_PLAN_NM,
+               MONTHLY_AMT, SORT_ORDER, USE_YN, DEL_YN, MEMO,
+               REG_ID, REG_DT, UPD_ID, UPD_DT, 0 AS USED_COUNT
+        FROM COST_CENTER_MST
+        WHERE FAMILY_ID       = #{familyId}
+          AND INCOME_PLAN_SEQ = #{incomePlanSeq}
+          AND DEL_YN          = 'N'
+        LIMIT 1
+    </select>
+
+    <select id="selectBySourcePlan" resultMap="CcMap">
+        SELECT CC_SEQ, FAMILY_ID, CC_NM, CC_TYPE,
+               SOURCE_PLAN_SEQ, INCOME_PLAN_SEQ, NULL AS INCOME_PLAN_NM,
+               MONTHLY_AMT, SORT_ORDER, USE_YN, DEL_YN, MEMO,
+               REG_ID, REG_DT, UPD_ID, UPD_DT, 0 AS USED_COUNT
+        FROM COST_CENTER_MST
+        WHERE FAMILY_ID       = #{familyId}
+          AND SOURCE_PLAN_SEQ = #{sourcePlanSeq}
+          AND DEL_YN          = 'N'
+        LIMIT 1
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="ccSeq">
+        INSERT INTO COST_CENTER_MST
+            (FAMILY_ID, CC_NM, CC_TYPE, SOURCE_PLAN_SEQ, SOURCE_ASSET_SEQ, INCOME_PLAN_SEQ,
+             MONTHLY_AMT, SORT_ORDER, USE_YN, DEL_YN, MEMO, REG_ID, REG_DT)
+        VALUES
+            (#{familyId}, #{ccNm}, #{ccType}, #{sourcePlanSeq}, #{sourceAssetSeq}, #{incomePlanSeq},
+             COALESCE(#{monthlyAmt}, 0), COALESCE(#{sortOrder}, 0),
+             COALESCE(#{useYn}, 'Y'), 'N', #{memo}, #{regId}, NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE COST_CENTER_MST
+        SET CC_NM           = #{ccNm},
+            INCOME_PLAN_SEQ = #{incomePlanSeq},
+            MONTHLY_AMT     = COALESCE(#{monthlyAmt}, 0),
+            SORT_ORDER      = COALESCE(#{sortOrder}, SORT_ORDER),
+            USE_YN          = COALESCE(#{useYn}, USE_YN),
+            MEMO            = #{memo},
+            UPD_ID          = #{updId},
+            UPD_DT          = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND CC_SEQ    = #{ccSeq}
+          AND DEL_YN    = 'N'
+    </update>
+
+    <update id="softDelete">
+        UPDATE COST_CENTER_MST
+        SET DEL_YN = 'Y',
+            UPD_ID = #{updId},
+            UPD_DT = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND CC_SEQ    = #{ccSeq}
+    </update>
+
+    <update id="softDeleteBySourceAsset">
+        UPDATE COST_CENTER_MST
+        SET DEL_YN = 'Y',
+            UPD_ID = #{updId},
+            UPD_DT = NOW()
+        WHERE FAMILY_ID        = #{familyId}
+          AND SOURCE_ASSET_SEQ = #{sourceAssetSeq}
+    </update>
+
+    <update id="softDeleteBySourcePlan">
+        UPDATE COST_CENTER_MST
+        SET DEL_YN = 'Y',
+            UPD_ID = #{updId},
+            UPD_DT = NOW()
+        WHERE FAMILY_ID       = #{familyId}
+          AND SOURCE_PLAN_SEQ = #{sourcePlanSeq}
+          AND CC_TYPE         = 'AUTO'
+    </update>
+
+    <select id="countUsedByCcSeq" resultType="int">
+        SELECT COUNT(*)
+        FROM CASH_FLOW_PLAN_MST
+        WHERE FAMILY_ID         = #{familyId}
+          AND COST_CENTER_TYPE  = 'CC'
+          AND COST_CENTER_SEQ   = #{ccSeq}
+          AND DEL_YN            = 'N'
+    </select>
+
+    <resultMap id="StatusMap" type="com.eksystems.homes.asset.vo.CostCenterStatusVO">
+        <id  property="ccSeq"             column="CC_SEQ"/>
+        <result property="ccNm"               column="CC_NM"/>
+        <result property="ccType"             column="CC_TYPE"/>
+        <result property="sourcePlanSeq"      column="SOURCE_PLAN_SEQ"/>
+        <result property="incomePlanSeq"      column="INCOME_PLAN_SEQ"/>
+        <result property="incomePlanNm"       column="INCOME_PLAN_NM"/>
+        <result property="incomeMonthlyAmt"   column="INCOME_MONTHLY_AMT"/>
+        <result property="expenseMonthlyAmt"  column="EXPENSE_MONTHLY_AMT"/>
+        <result property="expenseCnt"         column="EXPENSE_CNT"/>
+    </resultMap>
+
+    <select id="selectStatusList" resultMap="StatusMap">
+        SELECT
+            c.CC_SEQ,
+            c.CC_NM,
+            c.CC_TYPE,
+            c.SOURCE_PLAN_SEQ,
+            c.INCOME_PLAN_SEQ,
+            ip.PLAN_NM                                    AS INCOME_PLAN_NM,
+            COALESCE(ip.AMOUNT, 0)                        AS INCOME_MONTHLY_AMT,
+            COALESCE(SUM(ep.AMOUNT), 0)                   AS EXPENSE_MONTHLY_AMT,
+            COUNT(ep.PLAN_SEQ)                            AS EXPENSE_CNT
+        FROM COST_CENTER_MST c
+        LEFT JOIN CASH_FLOW_PLAN_MST ip
+               ON ip.PLAN_SEQ  = c.INCOME_PLAN_SEQ
+              AND ip.DEL_YN   = 'N'
+        LEFT JOIN CASH_FLOW_PLAN_MST ep
+               ON ep.COST_CENTER_TYPE = 'CC'
+              AND ep.COST_CENTER_SEQ  = c.CC_SEQ
+              AND ep.DEL_YN           = 'N'
+              AND ep.USE_YN           = 'Y'
+        WHERE c.FAMILY_ID = #{familyId}
+          AND c.DEL_YN    = 'N'
+          AND c.USE_YN    = 'Y'
+        GROUP BY c.CC_SEQ, c.CC_NM, c.CC_TYPE,
+                 c.SOURCE_PLAN_SEQ, c.INCOME_PLAN_SEQ, ip.PLAN_NM, ip.AMOUNT
+        ORDER BY c.SORT_ORDER, c.CC_SEQ
+    </select>
+
+    <select id="countByIncomePlanSeq" resultType="int">
+        SELECT COUNT(*)
+        FROM COST_CENTER_MST
+        WHERE FAMILY_ID       = #{familyId}
+          AND INCOME_PLAN_SEQ = #{incomePlanSeq}
+          AND DEL_YN          = 'N'
+    </select>
+
+</mapper>

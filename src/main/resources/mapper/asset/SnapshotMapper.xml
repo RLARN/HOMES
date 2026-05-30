@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.asset.mapper.SnapshotMapper">
+
+    <!-- ── DELETE: 재처리 허용 ── -->
+
+    <delete id="deleteCostCenterHst">
+        DELETE FROM COST_CENTER_HST WHERE FAMILY_ID = #{familyId} AND HST_YYMM = #{yymm}
+    </delete>
+
+    <delete id="deleteAssetHst">
+        DELETE FROM ASSET_HST WHERE FAMILY_ID = #{familyId} AND HST_YYMM = #{yymm}
+    </delete>
+
+    <delete id="deleteLoanHst">
+        DELETE FROM LOAN_HST WHERE FAMILY_ID = #{familyId} AND HST_YYMM = #{yymm}
+    </delete>
+
+    <delete id="deleteCashflowHst">
+        DELETE FROM CASHFLOW_PLAN_HST WHERE FAMILY_ID = #{familyId} AND HST_YYMM = #{yymm}
+    </delete>
+
+    <!-- ── INSERT: 현재 상태 스냅샷 ── -->
+
+    <!-- 비용센터: COST_CENTER_SEQ 직접 연결 + SOURCE_PLAN_SEQ 역방향 모두 포함 -->
+    <insert id="insertCostCenterHst">
+        INSERT INTO COST_CENTER_HST
+            (FAMILY_ID, HST_YYMM, CC_SEQ, CC_NM, CC_TYPE, INCOME_PLAN_NM, INCOME_AMT, EXPENSE_AMT, BALANCE)
+        SELECT
+            c.FAMILY_ID,
+            #{yymm},
+            c.CC_SEQ,
+            c.CC_NM,
+            c.CC_TYPE,
+            ip.PLAN_NM,
+            COALESCE(ip.AMOUNT, 0),
+            COALESCE(SUM(ep.AMOUNT), 0),
+            COALESCE(ip.AMOUNT, 0) - COALESCE(SUM(ep.AMOUNT), 0)
+        FROM COST_CENTER_MST c
+        LEFT JOIN CASH_FLOW_PLAN_MST ip
+               ON ip.PLAN_SEQ = c.INCOME_PLAN_SEQ AND ip.DEL_YN = 'N'
+        LEFT JOIN CASH_FLOW_PLAN_MST ep
+               ON ep.DEL_YN  = 'N'
+              AND ep.USE_YN  = 'Y'
+              AND (
+                    (ep.COST_CENTER_TYPE = 'CC' AND ep.COST_CENTER_SEQ = c.CC_SEQ)
+                 OR (c.SOURCE_PLAN_SEQ IS NOT NULL AND ep.PLAN_SEQ = c.SOURCE_PLAN_SEQ)
+              )
+        WHERE c.FAMILY_ID = #{familyId}
+          AND c.DEL_YN    = 'N'
+          AND c.USE_YN    = 'Y'
+        GROUP BY c.CC_SEQ, c.CC_NM, c.CC_TYPE, c.SOURCE_PLAN_SEQ,
+                 ip.PLAN_NM, ip.AMOUNT
+    </insert>
+
+    <insert id="insertAssetHst">
+        INSERT INTO ASSET_HST
+            (FAMILY_ID, HST_YYMM, ASSET_SEQ, ASSET_NM, ASSET_TYPE, ASSET_TYPE_NM, LIQUID_YN, AMOUNT)
+        SELECT
+            a.FAMILY_ID,
+            #{yymm},
+            a.ASSET_SEQ,
+            a.ASSET_NM,
+            a.ASSET_TYPE,
+            t.ASSET_TYPE_NM,
+            a.LIQUID_YN,
+            a.AMOUNT
+        FROM ASSET_MST a
+        LEFT JOIN ASSET_TYPE_CD t ON t.ASSET_TYPE = a.ASSET_TYPE
+        WHERE a.FAMILY_ID  = #{familyId}
+          AND a.DEL_YN     = 'N'
+          AND a.DISPOSE_YN = 'N'
+    </insert>
+
+    <insert id="insertLoanHst">
+        INSERT INTO LOAN_HST
+            (FAMILY_ID, HST_YYMM, LOAN_SEQ, LOAN_NM, LOAN_AMOUNT, CURRENT_BALANCE, INTEREST_RATE)
+        SELECT
+            FAMILY_ID,
+            #{yymm},
+            LOAN_SEQ,
+            LOAN_NM,
+            LOAN_AMOUNT,
+            CURRENT_BALANCE,
+            INTEREST_RATE
+        FROM LOAN_MST
+        WHERE FAMILY_ID = #{familyId}
+          AND DEL_YN    = 'N'
+          AND CLOSE_YN  = 'N'
+    </insert>
+
+    <insert id="insertCashflowHst">
+        INSERT INTO CASHFLOW_PLAN_HST
+            (FAMILY_ID, HST_YYMM, PLAN_SEQ, PLAN_NM, FLOW_TYPE, PLAN_TYPE_NM, AMOUNT, USE_YN)
+        SELECT
+            p.FAMILY_ID,
+            #{yymm},
+            p.PLAN_SEQ,
+            p.PLAN_NM,
+            p.FLOW_TYPE,
+            t.PLAN_TYPE_NM,
+            p.AMOUNT,
+            p.USE_YN
+        FROM CASH_FLOW_PLAN_MST p
+        LEFT JOIN CASH_FLOW_TYPE_CD t ON t.PLAN_TYPE = p.PLAN_TYPE
+        WHERE p.FAMILY_ID = #{familyId}
+          AND p.DEL_YN    = 'N'
+    </insert>
+
+    <!-- ── 조회 ── -->
+
+    <select id="countHst" resultType="int">
+        SELECT COUNT(*) FROM COST_CENTER_HST
+        WHERE FAMILY_ID = #{familyId} AND HST_YYMM = #{yymm}
+    </select>
+
+    <resultMap id="CcHstStatusMap" type="com.eksystems.homes.asset.vo.CostCenterStatusVO">
+        <result property="ccSeq"            column="CC_SEQ"/>
+        <result property="ccNm"             column="CC_NM"/>
+        <result property="ccType"           column="CC_TYPE"/>
+        <result property="incomePlanNm"     column="INCOME_PLAN_NM"/>
+        <result property="incomeMonthlyAmt" column="INCOME_AMT"/>
+        <result property="expenseMonthlyAmt" column="EXPENSE_AMT"/>
+    </resultMap>
+
+    <select id="selectCostCenterHst" resultMap="CcHstStatusMap">
+        SELECT CC_SEQ, CC_NM, CC_TYPE, INCOME_PLAN_NM, INCOME_AMT, EXPENSE_AMT, BALANCE
+        FROM COST_CENTER_HST
+        WHERE FAMILY_ID = #{familyId}
+          AND HST_YYMM  = #{yymm}
+        ORDER BY CC_SEQ
+    </select>
+
+    <!-- ── 자산변동현황: 월별 집계 ── -->
+    <resultMap id="AssetChangeSummaryMap" type="com.eksystems.homes.asset.vo.AssetChangeSummaryVO">
+        <result property="hstYymm"          column="HST_YYMM"/>
+        <result property="totalAssetAmt"    column="TOTAL_ASSET_AMT"/>
+        <result property="liquidAssetAmt"   column="LIQUID_ASSET_AMT"/>
+        <result property="fixedAssetAmt"    column="FIXED_ASSET_AMT"/>
+        <result property="totalLoanBalance" column="TOTAL_LOAN_BALANCE"/>
+        <result property="netAssetAmt"      column="NET_ASSET_AMT"/>
+        <result property="monthlyIncome"    column="MONTHLY_INCOME"/>
+        <result property="monthlyExpense"   column="MONTHLY_EXPENSE"/>
+    </resultMap>
+
+    <select id="selectAssetChangeSummary" resultMap="AssetChangeSummaryMap">
+        SELECT
+            a.HST_YYMM,
+            COALESCE(a.TOTAL_ASSET_AMT,   0)                               AS TOTAL_ASSET_AMT,
+            COALESCE(a.LIQUID_ASSET_AMT,  0)                               AS LIQUID_ASSET_AMT,
+            COALESCE(a.FIXED_ASSET_AMT,   0)                               AS FIXED_ASSET_AMT,
+            COALESCE(l.TOTAL_LOAN_BALANCE, 0)                              AS TOTAL_LOAN_BALANCE,
+            COALESCE(a.TOTAL_ASSET_AMT, 0) - COALESCE(l.TOTAL_LOAN_BALANCE, 0) AS NET_ASSET_AMT,
+            COALESCE(cf.MONTHLY_INCOME,  0)                                AS MONTHLY_INCOME,
+            COALESCE(cf.MONTHLY_EXPENSE, 0)                                AS MONTHLY_EXPENSE
+        FROM (
+            SELECT HST_YYMM,
+                   SUM(AMOUNT)                                             AS TOTAL_ASSET_AMT,
+                   SUM(CASE WHEN LIQUID_YN = 'Y' THEN AMOUNT ELSE 0 END)  AS LIQUID_ASSET_AMT,
+                   SUM(CASE WHEN LIQUID_YN = 'N' THEN AMOUNT ELSE 0 END)  AS FIXED_ASSET_AMT
+            FROM ASSET_HST
+            WHERE FAMILY_ID = #{familyId}
+            GROUP BY HST_YYMM
+        ) a
+        LEFT JOIN (
+            SELECT HST_YYMM,
+                   SUM(CURRENT_BALANCE) AS TOTAL_LOAN_BALANCE
+            FROM LOAN_HST
+            WHERE FAMILY_ID = #{familyId}
+            GROUP BY HST_YYMM
+        ) l ON a.HST_YYMM = l.HST_YYMM
+        LEFT JOIN (
+            SELECT HST_YYMM,
+                   SUM(CASE WHEN FLOW_TYPE = 'INCOME'
+                                 AND USE_YN = 'Y' THEN AMOUNT ELSE 0 END)                  AS MONTHLY_INCOME,
+                   SUM(CASE WHEN FLOW_TYPE IN ('EXPENSE','SAVING','INVEST')
+                                 AND USE_YN = 'Y' THEN AMOUNT ELSE 0 END)                  AS MONTHLY_EXPENSE
+            FROM CASHFLOW_PLAN_HST
+            WHERE FAMILY_ID = #{familyId}
+            GROUP BY HST_YYMM
+        ) cf ON a.HST_YYMM = cf.HST_YYMM
+        ORDER BY a.HST_YYMM
+    </select>
+
+    <!-- ── 자산변동현황: 유형별 월별 금액 ── -->
+    <resultMap id="AssetTypeMonthMap" type="com.eksystems.homes.asset.vo.AssetTypeMonthVO">
+        <result property="hstYymm"     column="HST_YYMM"/>
+        <result property="assetType"   column="ASSET_TYPE"/>
+        <result property="assetTypeNm" column="ASSET_TYPE_NM"/>
+        <result property="totalAmount" column="TOTAL_AMOUNT"/>
+    </resultMap>
+
+    <select id="selectAssetTypeMonthly" resultMap="AssetTypeMonthMap">
+        SELECT
+            HST_YYMM,
+            ASSET_TYPE,
+            COALESCE(ASSET_TYPE_NM, ASSET_TYPE) AS ASSET_TYPE_NM,
+            SUM(AMOUNT)                          AS TOTAL_AMOUNT
+        FROM ASSET_HST
+        WHERE FAMILY_ID = #{familyId}
+        GROUP BY HST_YYMM, ASSET_TYPE, ASSET_TYPE_NM
+        ORDER BY HST_YYMM, ASSET_TYPE
+    </select>
+
+    <select id="selectAllFamilyIds" resultType="string">
+        SELECT DISTINCT FAMILY_ID FROM COST_CENTER_MST WHERE DEL_YN = 'N'
+        UNION
+        SELECT DISTINCT FAMILY_ID FROM ASSET_MST       WHERE DEL_YN = 'N'
+        UNION
+        SELECT DISTINCT FAMILY_ID FROM CASH_FLOW_PLAN_MST WHERE DEL_YN = 'N'
+    </select>
+
+</mapper>

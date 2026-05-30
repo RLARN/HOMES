@@ -44,19 +44,21 @@
              href="https://docs.google.com/spreadsheets/d/1mUF5QvNkLow8y-xjSDED4If45ZMQQ7pv15HZL2IyQfM/edit?pli=1&amp;gid=1146901647#gid=1146901647"
              target="_blank"
              rel="noopener noreferrer">자산계획관리(엑셀)</a>
-        <a class="list-group-item list-group-item-action disabled" href="#">자산원장관리 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%--자산 등록--%>
-        <a class="list-group-item list-group-item-action disabled" href="#">대출원장관리 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%--대출자산 등록--%>
-        <a class="list-group-item list-group-item-action disabled" href="#">정기지출관리 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%--정기지출 등록--%>
-        <a class="list-group-item list-group-item-action disabled" href="#">정기수입관리 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%--정기수입 등록--%>
-        <a class="list-group-item list-group-item-action disabled" href="#">유동자산현황 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%--유동자산 현황 뷰 --%>
-        <a class="list-group-item list-group-item-action disabled" href="#">부동자산현황 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%--부동자산 현황 뷰 --%>
-        <a class="list-group-item list-group-item-action disabled" href="#">자산변동현황 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%--자산변동 그래프 뷰 --%>
-        <a class="list-group-item list-group-item-action disabled" href="#">자산변동예상 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%--자산변동 예상그래프 뷰--%>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/asset/ledger">자산원장관리</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/asset/loan">대출원장관리</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/asset/expense">정기지출관리</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/asset/income">정기수입관리</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/asset/costcenter">수지계정관리</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/asset/costcenter/status">수지계정현황</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/asset/change">자산변동현황</a><%--자산변동 그래프 뷰 --%>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/asset/forecast">자산변동예상</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/financial/statement">재무제표명세서</a>
         <a class="list-group-item list-group-item-action disabled" href="#">센트레빌입주관리 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%--센트레빌 입주시 목표 현금--%>
+
         <div class="homes-nav-title">Budget</div>
-        <a class="list-group-item list-group-item-action disabled" href="#">생활비기준정보설정 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%--생활비 관련은 안필요할수도--%>
-        <a class="list-group-item list-group-item-action disabled" href="#">생활비관리 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%-- 생활비지출을 입력하거나 입금요청에서 선택 --%>
-        <a class="list-group-item list-group-item-action disabled" href="#">자산지출관리 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a><%-- 자산지출을 입력하거나 입금요청에서 선택 --%>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/living/budget">생활비기준정보설정</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/living/expense">생활비관리</a>
+        <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/living/cashflow">수기현금흐름</a>
         <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/scm/deposit/depositRequest">입금요청</a>
 
 

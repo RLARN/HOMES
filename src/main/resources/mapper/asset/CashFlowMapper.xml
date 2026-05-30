@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.asset.mapper.CashFlowMapper">
+
+    <!-- ===================== 유형 코드 ===================== -->
+
+    <select id="selectTypeList" resultType="com.eksystems.homes.asset.vo.CashFlowTypeVO">
+        SELECT
+            PLAN_TYPE      AS planType,
+            FLOW_CATEGORY  AS flowCategory,
+            FLOW_TYPE      AS flowType,
+            PLAN_TYPE_NM   AS planTypeNm,
+            SORT_ORDER     AS sortOrder,
+            USE_YN         AS useYn
+        FROM CASH_FLOW_TYPE_CD
+        WHERE USE_YN = 'Y'
+        <if test="flowCategory != null and flowCategory != ''">
+          AND FLOW_CATEGORY = #{flowCategory}
+        </if>
+        ORDER BY SORT_ORDER
+    </select>
+
+    <!-- ===================== 현금흐름 계획 ===================== -->
+
+    <resultMap id="PlanMap" type="com.eksystems.homes.asset.vo.CashFlowPlanVO">
+        <id  property="planSeq"         column="PLAN_SEQ"/>
+        <result property="familyId"     column="FAMILY_ID"/>
+        <result property="planNm"       column="PLAN_NM"/>
+        <result property="planType"     column="PLAN_TYPE"/>
+        <result property="planTypeNm"   column="PLAN_TYPE_NM"/>
+        <result property="flowType"     column="FLOW_TYPE"/>
+        <result property="amount"       column="AMOUNT"/>
+        <result property="cycleNum"     column="CYCLE_NUM"/>
+        <result property="cycleUnit"    column="CYCLE_UNIT"/>
+        <result property="cycleBaseDay"   column="CYCLE_BASE_DAY"/>
+        <result property="cycleBaseMonth" column="CYCLE_BASE_MONTH"/>
+        <result property="cycleDesc"    column="CYCLE_DESC"/>
+        <result property="startYmd"     column="START_YMD"/>
+        <result property="endYmd"       column="END_YMD"/>
+        <result property="costCenterType" column="COST_CENTER_TYPE"/>
+        <result property="costCenterSeq"  column="COST_CENTER_SEQ"/>
+        <result property="loanSeq"             column="LOAN_SEQ"/>
+        <result property="loanNm"             column="LOAN_NM"/>
+        <result property="livingTotalLinkYn"  column="LIVING_TOTAL_LINK_YN"/>
+        <result property="useYn"              column="USE_YN"/>
+        <result property="delYn"        column="DEL_YN"/>
+        <result property="memo"         column="MEMO"/>
+        <result property="regId"        column="REG_ID"/>
+        <result property="regDt"        column="REG_DT"/>
+        <result property="updId"        column="UPD_ID"/>
+        <result property="updDt"        column="UPD_DT"/>
+        <result property="updDtStr"     column="UPD_DT_STR"/>
+    </resultMap>
+
+    <!-- 목록: flowCategory = 'INCOME' → V_CASH_FLOW_INCOME, 나머지 → V_CASH_FLOW_EXPENSE (FLOW_TYPE 필터 적용) -->
+    <select id="selectPlanList" resultMap="PlanMap">
+        <choose>
+            <when test="flowCategory == 'INCOME'">
+                SELECT * FROM V_CASH_FLOW_INCOME
+                WHERE FAMILY_ID = #{familyId}
+                  AND DEL_YN = 'N'
+                <if test="useYn != null and useYn != ''">
+                  AND USE_YN = #{useYn}
+                </if>
+            </when>
+            <otherwise>
+                SELECT * FROM V_CASH_FLOW_EXPENSE
+                WHERE FAMILY_ID = #{familyId}
+                  AND DEL_YN = 'N'
+                <if test="flowCategory != null and flowCategory != ''">
+                  AND FLOW_TYPE = #{flowCategory}
+                </if>
+                <if test="useYn != null and useYn != ''">
+                  AND USE_YN = #{useYn}
+                </if>
+            </otherwise>
+        </choose>
+        ORDER BY USE_YN DESC, PLAN_SEQ DESC
+    </select>
+
+    <select id="selectPlanDetail" resultMap="PlanMap">
+        SELECT
+            p.PLAN_SEQ, p.FAMILY_ID, p.PLAN_NM,
+            p.PLAN_TYPE, t.PLAN_TYPE_NM,
+            p.FLOW_TYPE, p.AMOUNT,
+            p.CYCLE_NUM, p.CYCLE_UNIT, p.CYCLE_BASE_DAY, p.CYCLE_BASE_MONTH,
+            CONCAT(
+                '매 ', p.CYCLE_NUM,
+                CASE p.CYCLE_UNIT WHEN 'DAY' THEN '일' WHEN 'MONTH' THEN '개월' WHEN 'YEAR' THEN '년' ELSE '' END,
+                CASE WHEN p.CYCLE_UNIT = 'YEAR' AND p.CYCLE_BASE_MONTH IS NOT NULL
+                     THEN CONCAT(' ', p.CYCLE_BASE_MONTH, '월') ELSE '' END,
+                CASE WHEN p.CYCLE_BASE_DAY IS NOT NULL
+                     THEN CONCAT(' ', p.CYCLE_BASE_DAY, '일') ELSE '' END
+            ) AS CYCLE_DESC,
+            p.START_YMD, p.END_YMD,
+            p.COST_CENTER_TYPE, p.COST_CENTER_SEQ,
+            p.LOAN_SEQ, l.LOAN_NM,
+            p.LIVING_TOTAL_LINK_YN,
+            p.USE_YN, p.DEL_YN, p.MEMO,
+            p.REG_ID, p.REG_DT, p.UPD_ID, p.UPD_DT,
+            DATE_FORMAT(p.UPD_DT, '%Y-%m-%d') AS UPD_DT_STR
+        FROM CASH_FLOW_PLAN_MST p
+        LEFT JOIN CASH_FLOW_TYPE_CD t ON p.PLAN_TYPE = t.PLAN_TYPE
+        LEFT JOIN LOAN_MST          l ON p.LOAN_SEQ  = l.LOAN_SEQ
+        WHERE p.FAMILY_ID = #{familyId}
+          AND p.PLAN_SEQ  = #{planSeq}
+          AND p.DEL_YN    = 'N'
+    </select>
+
+    <insert id="insertPlan" parameterType="com.eksystems.homes.asset.vo.CashFlowPlanVO"
+            useGeneratedKeys="true" keyProperty="planSeq">
+        INSERT INTO CASH_FLOW_PLAN_MST (
+            FAMILY_ID, PLAN_NM, PLAN_TYPE, FLOW_TYPE, AMOUNT,
+            CYCLE_TYPE, CYCLE_NUM, CYCLE_UNIT, CYCLE_BASE_DAY, CYCLE_BASE_MONTH,
+            START_YMD, END_YMD,
+            COST_CENTER_TYPE, COST_CENTER_SEQ,
+            LOAN_SEQ, LIVING_TOTAL_LINK_YN,
+            USE_YN, DEL_YN, MEMO,
+            REG_ID, REG_DT, UPD_ID, UPD_DT
+        ) VALUES (
+            #{familyId}, #{planNm}, #{planType}, #{flowType}, #{amount},
+            'CUSTOM', #{cycleNum}, #{cycleUnit}, #{cycleBaseDay}, #{cycleBaseMonth},
+            #{startYmd}, #{endYmd},
+            #{costCenterType}, #{costCenterSeq},
+            #{loanSeq},
+            <choose><when test="livingTotalLinkYn != null">#{livingTotalLinkYn}</when><otherwise>'N'</otherwise></choose>,
+            <choose><when test="useYn != null">#{useYn}</when><otherwise>'Y'</otherwise></choose>,
+            'N', #{memo},
+            #{regId}, NOW(), #{updId}, NOW()
+        )
+    </insert>
+
+    <update id="updatePlan" parameterType="com.eksystems.homes.asset.vo.CashFlowPlanVO">
+        UPDATE CASH_FLOW_PLAN_MST
+        SET
+            PLAN_NM               = #{planNm},
+            PLAN_TYPE             = #{planType},
+            FLOW_TYPE             = #{flowType},
+            AMOUNT                = #{amount},
+            CYCLE_NUM             = #{cycleNum},
+            CYCLE_UNIT            = #{cycleUnit},
+            CYCLE_BASE_DAY        = #{cycleBaseDay},
+            CYCLE_BASE_MONTH      = #{cycleBaseMonth},
+            START_YMD             = #{startYmd},
+            END_YMD               = #{endYmd},
+            COST_CENTER_TYPE      = #{costCenterType},
+            COST_CENTER_SEQ       = #{costCenterSeq},
+            LOAN_SEQ              = #{loanSeq},
+            LIVING_TOTAL_LINK_YN  = <choose><when test="livingTotalLinkYn != null">#{livingTotalLinkYn}</when><otherwise>LIVING_TOTAL_LINK_YN</otherwise></choose>,
+            USE_YN                = #{useYn},
+            MEMO                  = #{memo},
+            UPD_ID                = #{updId},
+            UPD_DT                = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND PLAN_SEQ  = #{planSeq}
+          AND DEL_YN    = 'N'
+    </update>
+
+    <update id="deletePlan">
+        UPDATE CASH_FLOW_PLAN_MST
+        SET DEL_YN = 'Y',
+            UPD_ID = #{updId},
+            UPD_DT = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND PLAN_SEQ  = #{planSeq}
+    </update>
+
+    <update id="updateUseYn">
+        UPDATE CASH_FLOW_PLAN_MST
+        SET USE_YN = #{useYn},
+            UPD_ID = #{updId},
+            UPD_DT = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND PLAN_SEQ  = #{planSeq}
+          AND DEL_YN    = 'N'
+    </update>
+
+    <!-- 생활비 전체 연동 플랜 금액 일괄 업데이트 -->
+    <update id="updateLivingTotalLinkedPlans">
+        UPDATE CASH_FLOW_PLAN_MST
+        SET AMOUNT = #{totalAmt},
+            UPD_ID = #{updId},
+            UPD_DT = NOW()
+        WHERE FAMILY_ID          = #{familyId}
+          AND LIVING_TOTAL_LINK_YN = 'Y'
+          AND DEL_YN             = 'N'
+    </update>
+
+    <!-- AI 검색 -->
+    <select id="searchPlans" resultMap="PlanMap">
+        SELECT
+            p.PLAN_SEQ, p.FAMILY_ID, p.PLAN_NM, p.PLAN_TYPE, t.PLAN_TYPE_NM,
+            p.FLOW_TYPE, p.AMOUNT, p.CYCLE_NUM, p.CYCLE_UNIT,
+            p.CYCLE_BASE_DAY, p.CYCLE_BASE_MONTH,
+            CONCAT('매 ',p.CYCLE_NUM,
+              CASE p.CYCLE_UNIT WHEN 'DAY' THEN '일' WHEN 'MONTH' THEN '개월' WHEN 'YEAR' THEN '년' ELSE '' END,
+              CASE WHEN p.CYCLE_UNIT='YEAR' AND p.CYCLE_BASE_MONTH IS NOT NULL
+                   THEN CONCAT(' ',p.CYCLE_BASE_MONTH,'월') ELSE '' END,
+              CASE WHEN p.CYCLE_BASE_DAY IS NOT NULL
+                   THEN CONCAT(' ',p.CYCLE_BASE_DAY,'일') ELSE '' END
+            ) AS CYCLE_DESC,
+            p.START_YMD, p.END_YMD, p.USE_YN, p.DEL_YN, p.MEMO,
+            p.REG_ID, p.UPD_ID, p.UPD_DT,
+            DATE_FORMAT(p.UPD_DT,'%Y-%m-%d') AS UPD_DT_STR
+        FROM CASH_FLOW_PLAN_MST p
+        LEFT JOIN CASH_FLOW_TYPE_CD t ON p.PLAN_TYPE = t.PLAN_TYPE
+        WHERE p.FAMILY_ID = #{familyId}
+          AND p.DEL_YN = 'N'
+          AND (
+              p.PLAN_NM       LIKE CONCAT('%',#{keyword},'%')
+           OR t.PLAN_TYPE_NM  LIKE CONCAT('%',#{keyword},'%')
+           OR p.MEMO          LIKE CONCAT('%',#{keyword},'%')
+          )
+        ORDER BY p.USE_YN DESC, p.FLOW_TYPE, p.PLAN_SEQ DESC
+        LIMIT 15
+    </select>
+
+    <!-- 비용센터 선택용: 활성 정기수입 목록 -->
+    <select id="selectIncomePlansForCostCenter" resultMap="PlanMap">
+        SELECT
+            p.PLAN_SEQ, p.FAMILY_ID, p.PLAN_NM,
+            p.PLAN_TYPE, t.PLAN_TYPE_NM,
+            p.FLOW_TYPE, p.AMOUNT,
+            p.CYCLE_NUM, p.CYCLE_UNIT, p.CYCLE_BASE_DAY, p.CYCLE_BASE_MONTH,
+            NULL AS CYCLE_DESC, NULL AS COST_CENTER_TYPE, NULL AS COST_CENTER_SEQ,
+            p.START_YMD, p.END_YMD, p.USE_YN, p.DEL_YN, p.MEMO,
+            p.REG_ID, p.REG_DT, p.UPD_ID, p.UPD_DT,
+            DATE_FORMAT(p.UPD_DT, '%Y-%m-%d') AS UPD_DT_STR
+        FROM CASH_FLOW_PLAN_MST p
+        LEFT JOIN CASH_FLOW_TYPE_CD t ON p.PLAN_TYPE = t.PLAN_TYPE
+        WHERE p.FAMILY_ID = #{familyId}
+          AND p.FLOW_TYPE = 'INCOME'
+          AND p.USE_YN    = 'Y'
+          AND p.DEL_YN    = 'N'
+        ORDER BY p.PLAN_NM
+    </select>
+
+    <!-- 예측 계산용: 활성 전체 계획 -->
+    <select id="selectActivePlansForForecast" resultMap="PlanMap">
+        SELECT
+            p.PLAN_SEQ, p.FAMILY_ID, p.PLAN_NM, p.PLAN_TYPE, t.PLAN_TYPE_NM,
+            p.FLOW_TYPE, p.AMOUNT,
+            p.CYCLE_NUM, p.CYCLE_UNIT, p.CYCLE_BASE_DAY, p.CYCLE_BASE_MONTH,
+            NULL AS CYCLE_DESC,
+            p.START_YMD, p.END_YMD, p.USE_YN, p.DEL_YN, p.MEMO,
+            p.REG_ID, p.REG_DT, p.UPD_ID, p.UPD_DT,
+            DATE_FORMAT(p.UPD_DT, '%Y-%m-%d') AS UPD_DT_STR
+        FROM CASH_FLOW_PLAN_MST p
+        LEFT JOIN CASH_FLOW_TYPE_CD t ON p.PLAN_TYPE = t.PLAN_TYPE
+        WHERE p.FAMILY_ID = #{familyId}
+          AND p.USE_YN    = 'Y'
+          AND p.DEL_YN    = 'N'
+        ORDER BY p.FLOW_TYPE, p.PLAN_SEQ
+    </select>
+
+</mapper>

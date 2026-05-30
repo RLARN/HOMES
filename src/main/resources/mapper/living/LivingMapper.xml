@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.living.mapper.LivingMapper">
+
+    <!-- ==================== 카테고리 ==================== -->
+
+    <resultMap id="CatMap" type="com.eksystems.homes.living.vo.LivingBudgetCatVO">
+        <id  property="catSeq"    column="CAT_SEQ"/>
+        <result property="familyId"   column="FAMILY_ID"/>
+        <result property="catNm"      column="CAT_NM"/>
+        <result property="sortOrder"  column="SORT_ORDER"/>
+        <result property="useYn"      column="USE_YN"/>
+        <result property="regId"      column="REG_ID"/>
+        <result property="regDt"      column="REG_DT"/>
+        <result property="updId"      column="UPD_ID"/>
+        <result property="updDt"      column="UPD_DT"/>
+    </resultMap>
+
+    <select id="selectCatList" resultMap="CatMap">
+        SELECT CAT_SEQ, FAMILY_ID, CAT_NM, SORT_ORDER, USE_YN, REG_ID, REG_DT, UPD_ID, UPD_DT
+        FROM LIVING_BUDGET_CAT
+        WHERE FAMILY_ID = #{familyId}
+          AND USE_YN = 'Y'
+        ORDER BY SORT_ORDER, CAT_SEQ
+    </select>
+
+    <select id="selectCat" resultMap="CatMap">
+        SELECT CAT_SEQ, FAMILY_ID, CAT_NM, SORT_ORDER, USE_YN, REG_ID, REG_DT, UPD_ID, UPD_DT
+        FROM LIVING_BUDGET_CAT
+        WHERE FAMILY_ID = #{familyId}
+          AND CAT_SEQ = #{catSeq}
+    </select>
+
+    <insert id="insertCat" useGeneratedKeys="true" keyProperty="catSeq">
+        INSERT INTO LIVING_BUDGET_CAT (FAMILY_ID, CAT_NM, SORT_ORDER, USE_YN, REG_ID, REG_DT)
+        VALUES (#{familyId}, #{catNm},
+                COALESCE(#{sortOrder}, (SELECT COALESCE(MAX(SORT_ORDER),0)+10 FROM LIVING_BUDGET_CAT t WHERE t.FAMILY_ID=#{familyId})),
+                'Y', #{regId}, NOW())
+    </insert>
+
+    <update id="updateCat">
+        UPDATE LIVING_BUDGET_CAT
+        SET CAT_NM     = #{catNm},
+            SORT_ORDER = #{sortOrder},
+            USE_YN     = COALESCE(#{useYn}, USE_YN),
+            UPD_ID     = #{updId},
+            UPD_DT     = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND CAT_SEQ   = #{catSeq}
+    </update>
+
+    <!-- ==================== 항목 ==================== -->
+
+    <resultMap id="ItemMap" type="com.eksystems.homes.living.vo.LivingBudgetItemVO">
+        <id  property="itemSeq"       column="ITEM_SEQ"/>
+        <result property="familyId"       column="FAMILY_ID"/>
+        <result property="catSeq"         column="CAT_SEQ"/>
+        <result property="catNm"          column="CAT_NM"/>
+        <result property="itemNm"         column="ITEM_NM"/>
+        <result property="budgetAmt"      column="BUDGET_AMT"/>
+        <result property="incomePlanSeq"  column="INCOME_PLAN_SEQ"/>
+        <result property="incomePlanNm"   column="INCOME_PLAN_NM"/>
+        <result property="ccSeq"          column="CC_SEQ"/>
+        <result property="ccNm"           column="CC_NM"/>
+        <result property="sortOrder"      column="SORT_ORDER"/>
+        <result property="useYn"          column="USE_YN"/>
+        <result property="delYn"          column="DEL_YN"/>
+        <result property="memo"           column="MEMO"/>
+        <result property="regId"          column="REG_ID"/>
+        <result property="regDt"          column="REG_DT"/>
+        <result property="updId"          column="UPD_ID"/>
+        <result property="updDt"          column="UPD_DT"/>
+    </resultMap>
+
+    <select id="selectItemList" resultMap="ItemMap">
+        SELECT i.ITEM_SEQ, i.FAMILY_ID, i.CAT_SEQ,
+               c.CAT_NM,
+               i.ITEM_NM, i.BUDGET_AMT,
+               i.INCOME_PLAN_SEQ,
+               p.PLAN_NM AS INCOME_PLAN_NM,
+               i.CC_SEQ,
+               cc.CC_NM,
+               i.SORT_ORDER, i.USE_YN, i.DEL_YN, i.MEMO,
+               i.REG_ID, i.REG_DT, i.UPD_ID, i.UPD_DT
+        FROM LIVING_BUDGET_ITEM i
+        JOIN LIVING_BUDGET_CAT c ON c.CAT_SEQ = i.CAT_SEQ
+        LEFT JOIN CASH_FLOW_PLAN_MST p ON p.PLAN_SEQ = i.INCOME_PLAN_SEQ
+        LEFT JOIN COST_CENTER_MST cc ON cc.CC_SEQ = i.CC_SEQ
+        WHERE i.FAMILY_ID = #{familyId}
+          AND i.DEL_YN = 'N'
+          <if test="catSeq != null">
+          AND i.CAT_SEQ = #{catSeq}
+          </if>
+        ORDER BY i.SORT_ORDER, i.ITEM_SEQ
+    </select>
+
+    <select id="selectAllItemList" resultMap="ItemMap">
+        SELECT i.ITEM_SEQ, i.FAMILY_ID, i.CAT_SEQ,
+               c.CAT_NM,
+               i.ITEM_NM, i.BUDGET_AMT,
+               i.INCOME_PLAN_SEQ,
+               p.PLAN_NM AS INCOME_PLAN_NM,
+               i.CC_SEQ,
+               cc.CC_NM,
+               i.SORT_ORDER, i.USE_YN, i.DEL_YN, i.MEMO,
+               i.REG_ID, i.REG_DT, i.UPD_ID, i.UPD_DT
+        FROM LIVING_BUDGET_ITEM i
+        JOIN LIVING_BUDGET_CAT c ON c.CAT_SEQ = i.CAT_SEQ
+        LEFT JOIN CASH_FLOW_PLAN_MST p ON p.PLAN_SEQ = i.INCOME_PLAN_SEQ
+        LEFT JOIN COST_CENTER_MST cc ON cc.CC_SEQ = i.CC_SEQ
+        WHERE i.FAMILY_ID = #{familyId}
+          AND i.DEL_YN = 'N'
+          AND c.USE_YN = 'Y'
+        ORDER BY c.SORT_ORDER, c.CAT_SEQ, i.SORT_ORDER, i.ITEM_SEQ
+    </select>
+
+    <select id="selectItem" resultMap="ItemMap">
+        SELECT i.ITEM_SEQ, i.FAMILY_ID, i.CAT_SEQ,
+               c.CAT_NM,
+               i.ITEM_NM, i.BUDGET_AMT,
+               i.INCOME_PLAN_SEQ,
+               p.PLAN_NM AS INCOME_PLAN_NM,
+               i.CC_SEQ,
+               cc.CC_NM,
+               i.SORT_ORDER, i.USE_YN, i.DEL_YN, i.MEMO,
+               i.REG_ID, i.REG_DT, i.UPD_ID, i.UPD_DT
+        FROM LIVING_BUDGET_ITEM i
+        JOIN LIVING_BUDGET_CAT c ON c.CAT_SEQ = i.CAT_SEQ
+        LEFT JOIN CASH_FLOW_PLAN_MST p ON p.PLAN_SEQ = i.INCOME_PLAN_SEQ
+        LEFT JOIN COST_CENTER_MST cc ON cc.CC_SEQ = i.CC_SEQ
+        WHERE i.FAMILY_ID = #{familyId}
+          AND i.ITEM_SEQ  = #{itemSeq}
+    </select>
+
+    <insert id="insertItem" useGeneratedKeys="true" keyProperty="itemSeq">
+        INSERT INTO LIVING_BUDGET_ITEM
+            (FAMILY_ID, CAT_SEQ, ITEM_NM, BUDGET_AMT, INCOME_PLAN_SEQ, CC_SEQ, SORT_ORDER, USE_YN, DEL_YN, MEMO, REG_ID, REG_DT)
+        VALUES
+            (#{familyId}, #{catSeq}, #{itemNm}, #{budgetAmt}, #{incomePlanSeq}, #{ccSeq},
+             COALESCE(#{sortOrder}, 0), 'Y', 'N', #{memo}, #{regId}, NOW())
+    </insert>
+
+    <update id="updateItem">
+        UPDATE LIVING_BUDGET_ITEM
+        SET CAT_SEQ         = #{catSeq},
+            ITEM_NM         = #{itemNm},
+            BUDGET_AMT      = #{budgetAmt},
+            INCOME_PLAN_SEQ = #{incomePlanSeq},
+            CC_SEQ          = #{ccSeq},
+            SORT_ORDER      = #{sortOrder},
+            MEMO            = #{memo},
+            UPD_ID          = #{updId},
+            UPD_DT          = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND ITEM_SEQ  = #{itemSeq}
+    </update>
+
+    <update id="deleteItem">
+        UPDATE LIVING_BUDGET_ITEM
+        SET DEL_YN = 'Y',
+            UPD_ID = #{updId},
+            UPD_DT = NOW()
+        WHERE FAMILY_ID = #{familyId}
+          AND ITEM_SEQ  = #{itemSeq}
+    </update>
+
+    <!-- ==================== 월별 실적 헤더 ==================== -->
+
+    <resultMap id="MstMap" type="com.eksystems.homes.living.vo.LivingExpenseMstVO">
+        <id  property="expSeq"        column="EXP_SEQ"/>
+        <result property="familyId"       column="FAMILY_ID"/>
+        <result property="expYymm"        column="EXP_YYMM"/>
+        <result property="memo"           column="MEMO"/>
+        <result property="totalBudgetAmt" column="TOTAL_BUDGET_AMT"/>
+        <result property="totalActualAmt" column="TOTAL_ACTUAL_AMT"/>
+        <result property="regId"          column="REG_ID"/>
+        <result property="regDt"          column="REG_DT"/>
+        <result property="updId"          column="UPD_ID"/>
+        <result property="updDt"          column="UPD_DT"/>
+    </resultMap>
+
+    <select id="selectExpenseList" resultMap="MstMap">
+        SELECT m.EXP_SEQ, m.FAMILY_ID, m.EXP_YYMM, m.MEMO,
+               m.REG_ID, m.REG_DT, m.UPD_ID, m.UPD_DT,
+               COALESCE((SELECT SUM(i.BUDGET_AMT)
+                         FROM LIVING_BUDGET_ITEM i
+                         JOIN LIVING_BUDGET_CAT c ON c.CAT_SEQ = i.CAT_SEQ
+                         WHERE i.FAMILY_ID = m.FAMILY_ID
+                           AND i.DEL_YN = 'N' AND c.USE_YN = 'Y'), 0) AS TOTAL_BUDGET_AMT,
+               COALESCE((SELECT SUM(d.ACTUAL_AMT)
+                         FROM LIVING_EXPENSE_DTL d
+                         WHERE d.EXP_SEQ = m.EXP_SEQ), 0)             AS TOTAL_ACTUAL_AMT
+        FROM LIVING_EXPENSE_MST m
+        WHERE m.FAMILY_ID = #{familyId}
+        ORDER BY m.EXP_YYMM DESC
+    </select>
+
+    <select id="selectExpenseMst" resultMap="MstMap">
+        SELECT EXP_SEQ, FAMILY_ID, EXP_YYMM, MEMO,
+               REG_ID, REG_DT, UPD_ID, UPD_DT,
+               0 AS TOTAL_BUDGET_AMT, 0 AS TOTAL_ACTUAL_AMT
+        FROM LIVING_EXPENSE_MST
+        WHERE FAMILY_ID = #{familyId}
+          AND EXP_YYMM  = #{expYymm}
+    </select>
+
+    <insert id="insertExpenseMst" useGeneratedKeys="true" keyProperty="expSeq">
+        INSERT INTO LIVING_EXPENSE_MST (FAMILY_ID, EXP_YYMM, MEMO, REG_ID, REG_DT)
+        VALUES (#{familyId}, #{expYymm}, #{memo}, #{regId}, NOW())
+    </insert>
+
+    <!-- ==================== 월별 실적 상세 ==================== -->
+
+    <resultMap id="DtlMap" type="com.eksystems.homes.living.vo.LivingExpenseDtlVO">
+        <id  property="dtlSeq"    column="DTL_SEQ"/>
+        <result property="expSeq"     column="EXP_SEQ"/>
+        <result property="itemSeq"    column="ITEM_SEQ"/>
+        <result property="catSeq"     column="CAT_SEQ"/>
+        <result property="catNm"      column="CAT_NM"/>
+        <result property="itemNm"     column="ITEM_NM"/>
+        <result property="budgetAmt"  column="BUDGET_AMT"/>
+        <result property="actualAmt"  column="ACTUAL_AMT"/>
+        <result property="memo"       column="MEMO"/>
+        <result property="regId"      column="REG_ID"/>
+        <result property="regDt"      column="REG_DT"/>
+        <result property="updId"      column="UPD_ID"/>
+        <result property="updDt"      column="UPD_DT"/>
+    </resultMap>
+
+    <select id="selectExpenseDtlList" resultMap="DtlMap">
+        SELECT d.DTL_SEQ, d.EXP_SEQ, d.ITEM_SEQ,
+               i.CAT_SEQ, c.CAT_NM,
+               i.ITEM_NM, i.BUDGET_AMT,
+               d.ACTUAL_AMT, d.MEMO,
+               d.REG_ID, d.REG_DT, d.UPD_ID, d.UPD_DT
+        FROM LIVING_EXPENSE_DTL d
+        JOIN LIVING_BUDGET_ITEM i ON i.ITEM_SEQ = d.ITEM_SEQ
+        JOIN LIVING_BUDGET_CAT  c ON c.CAT_SEQ  = i.CAT_SEQ
+        WHERE d.EXP_SEQ   = #{expSeq}
+          AND i.FAMILY_ID = #{familyId}
+        ORDER BY c.SORT_ORDER, c.CAT_SEQ, i.SORT_ORDER, i.ITEM_SEQ
+    </select>
+
+    <insert id="upsertExpenseDtl">
+        INSERT INTO LIVING_EXPENSE_DTL (EXP_SEQ, ITEM_SEQ, ACTUAL_AMT, MEMO, REG_ID, REG_DT, UPD_ID, UPD_DT)
+        VALUES (#{expSeq}, #{itemSeq}, #{actualAmt}, #{memo}, #{regId}, NOW(), #{updId}, NOW())
+        ON DUPLICATE KEY UPDATE
+            ACTUAL_AMT = VALUES(ACTUAL_AMT),
+            MEMO       = VALUES(MEMO),
+            UPD_ID     = VALUES(UPD_ID),
+            UPD_DT     = NOW()
+    </insert>
+
+    <!-- ==================== 월별 수입 수기 등록 ==================== -->
+
+    <resultMap id="IncomeMap" type="com.eksystems.homes.living.vo.LivingIncomeMstVO">
+        <id  property="incomeSeq"   column="INCOME_SEQ"/>
+        <result property="familyId"     column="FAMILY_ID"/>
+        <result property="ccSeq"        column="CC_SEQ"/>
+        <result property="ccNm"         column="CC_NM"/>
+        <result property="flowType"     column="FLOW_TYPE"/>
+        <result property="incomeYymm"   column="INCOME_YYMM"/>
+        <result property="actualAmt"    column="ACTUAL_AMT"/>
+        <result property="memo"         column="MEMO"/>
+        <result property="regId"        column="REG_ID"/>
+        <result property="regDt"        column="REG_DT"/>
+        <result property="updId"        column="UPD_ID"/>
+        <result property="updDt"        column="UPD_DT"/>
+    </resultMap>
+
+    <select id="selectIncomeListByRange" resultMap="IncomeMap">
+        SELECT i.INCOME_SEQ, i.FAMILY_ID, i.CC_SEQ,
+               cc.CC_NM, i.FLOW_TYPE,
+               i.INCOME_YYMM, i.ACTUAL_AMT, i.MEMO,
+               i.REG_ID, i.REG_DT, i.UPD_ID, i.UPD_DT
+        FROM LIVING_INCOME_MST i
+        JOIN COST_CENTER_MST cc ON cc.CC_SEQ = i.CC_SEQ
+        WHERE i.FAMILY_ID   = #{familyId}
+          AND i.INCOME_YYMM BETWEEN #{fromYymm} AND #{toYymm}
+        ORDER BY i.FLOW_TYPE, i.INCOME_YYMM, cc.SORT_ORDER, i.CC_SEQ
+    </select>
+
+    <select id="selectIncomeList" resultMap="IncomeMap">
+        SELECT i.INCOME_SEQ, i.FAMILY_ID, i.CC_SEQ,
+               cc.CC_NM, i.FLOW_TYPE,
+               i.INCOME_YYMM, i.ACTUAL_AMT, i.MEMO,
+               i.REG_ID, i.REG_DT, i.UPD_ID, i.UPD_DT
+        FROM LIVING_INCOME_MST i
+        JOIN COST_CENTER_MST cc ON cc.CC_SEQ = i.CC_SEQ
+        WHERE i.FAMILY_ID   = #{familyId}
+          AND i.INCOME_YYMM = #{incomeYymm}
+          AND i.FLOW_TYPE   = 'INCOME'
+        ORDER BY cc.SORT_ORDER, i.CC_SEQ
+    </select>
+
+    <select id="selectManualCashflowList" resultMap="IncomeMap">
+        SELECT i.INCOME_SEQ, i.FAMILY_ID, i.CC_SEQ,
+               cc.CC_NM, i.FLOW_TYPE,
+               i.INCOME_YYMM, i.ACTUAL_AMT, i.MEMO,
+               i.REG_ID, i.REG_DT, i.UPD_ID, i.UPD_DT
+        FROM LIVING_INCOME_MST i
+        JOIN COST_CENTER_MST cc ON cc.CC_SEQ = i.CC_SEQ
+        WHERE i.FAMILY_ID   = #{familyId}
+          AND i.INCOME_YYMM = #{yymm}
+        ORDER BY i.FLOW_TYPE DESC, cc.SORT_ORDER, i.CC_SEQ
+    </select>
+
+    <insert id="upsertIncome" useGeneratedKeys="true" keyProperty="incomeSeq">
+        INSERT INTO LIVING_INCOME_MST
+            (FAMILY_ID, CC_SEQ, FLOW_TYPE, INCOME_YYMM, ACTUAL_AMT, MEMO, REG_ID, REG_DT, UPD_ID, UPD_DT)
+        VALUES
+            (#{familyId}, #{ccSeq}, COALESCE(#{flowType}, 'INCOME'), #{incomeYymm},
+             #{actualAmt}, #{memo}, #{regId}, NOW(), #{updId}, NOW())
+        ON DUPLICATE KEY UPDATE
+            ACTUAL_AMT = VALUES(ACTUAL_AMT),
+            MEMO       = VALUES(MEMO),
+            UPD_ID     = VALUES(UPD_ID),
+            UPD_DT     = NOW()
+    </insert>
+
+    <update id="deleteIncome">
+        DELETE FROM LIVING_INCOME_MST
+        WHERE FAMILY_ID = #{familyId}
+          AND INCOME_SEQ = #{incomeSeq}
+    </update>
+
+    <!-- ==================== 재무제표 명세용 ==================== -->
+
+    <resultMap id="ExpenseSummaryMap" type="com.eksystems.homes.living.vo.LivingExpenseSummaryVO">
+        <result property="catSeq"         column="CAT_SEQ"/>
+        <result property="catNm"          column="CAT_NM"/>
+        <result property="totalBudgetAmt" column="TOTAL_BUDGET_AMT"/>
+        <result property="totalActualAmt" column="TOTAL_ACTUAL_AMT"/>
+    </resultMap>
+
+    <select id="selectExpenseSummaryByRange" resultMap="ExpenseSummaryMap">
+        SELECT c.CAT_SEQ, c.CAT_NM,
+               COALESCE(SUM(i.BUDGET_AMT), 0)          AS TOTAL_BUDGET_AMT,
+               COALESCE(SUM(d.ACTUAL_AMT), 0)           AS TOTAL_ACTUAL_AMT
+        FROM LIVING_BUDGET_CAT c
+        JOIN LIVING_BUDGET_ITEM i ON i.CAT_SEQ = c.CAT_SEQ
+                                 AND i.DEL_YN = 'N'
+                                 AND i.FAMILY_ID = #{familyId}
+        LEFT JOIN LIVING_EXPENSE_MST m ON m.FAMILY_ID = #{familyId}
+                                      AND m.EXP_YYMM BETWEEN #{fromYymm} AND #{toYymm}
+        LEFT JOIN LIVING_EXPENSE_DTL d ON d.EXP_SEQ = m.EXP_SEQ
+                                      AND d.ITEM_SEQ = i.ITEM_SEQ
+        WHERE c.FAMILY_ID = #{familyId}
+          AND c.USE_YN    = 'Y'
+        GROUP BY c.CAT_SEQ, c.CAT_NM, c.SORT_ORDER
+        ORDER BY c.SORT_ORDER, c.CAT_SEQ
+    </select>
+
+</mapper>

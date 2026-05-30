@@ -1,5 +1,12 @@
 package com.eksystems.homes.assistant.service;
 
+import com.eksystems.homes.asset.mapper.AssetMapper;
+import com.eksystems.homes.asset.mapper.CashFlowMapper;
+import com.eksystems.homes.asset.service.ForecastService;
+import com.eksystems.homes.asset.vo.AssetSummaryVO;
+import com.eksystems.homes.asset.vo.AssetVO;
+import com.eksystems.homes.asset.vo.CashFlowPlanVO;
+import com.eksystems.homes.asset.vo.LoanVO;
 import com.eksystems.homes.assistant.vo.ChatResponse;
 import com.eksystems.homes.note.service.NoteService;
 import com.eksystems.homes.note.vo.NoteVO;
@@ -17,10 +24,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 
 @Service
@@ -28,15 +32,21 @@ public class GeminiService {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
 
-    private static final Map<String, String> TOOL_LABELS = Map.of(
-            "list_deposit_requests", "입금요청 목록 조회",
-            "get_deposit_detail", "입금요청 상세 조회",
-            "global_search", "전체 검색",
-            "insert_deposit_request", "입금요청 등록",
-            "insert_note", "공유메모 등록",
-            "update_note", "공유메모 수정",
-            "approve_deposit", "입금요청 결재 처리",
-            "delete_deposit", "입금요청 삭제"
+    private static final Map<String, String> TOOL_LABELS = Map.ofEntries(
+            // ── 검색 ──────────────────────────────────────────────────
+            Map.entry("global_search",          "통합 검색"),
+            // ── 입금요청 ──────────────────────────────────────────────
+            Map.entry("list_deposit_requests",  "입금요청 목록 조회"),
+            Map.entry("get_deposit_detail",     "입금요청 상세 조회"),
+            Map.entry("insert_deposit_request", "입금요청 등록"),
+            Map.entry("approve_deposit",        "입금요청 결재 처리"),
+            Map.entry("delete_deposit",         "입금요청 삭제"),
+            // ── 공유메모 ──────────────────────────────────────────────
+            Map.entry("insert_note",            "공유메모 등록"),
+            Map.entry("update_note",            "공유메모 수정"),
+            // ── 자산관리 ──────────────────────────────────────────────
+            Map.entry("get_asset_summary",      "자산 요약 조회"),
+            Map.entry("get_asset_forecast",     "자산변동 예측 분석")
     );
 
     @Value("${assistant.provider:gemini}")
@@ -54,16 +64,24 @@ public class GeminiService {
     @Value("${ollama.model:gemma4}")
     private String ollamaModel;
 
-    private final ScmService scmService;
-    private final NoteService noteService;
+    private final ScmService      scmService;
+    private final NoteService     noteService;
+    private final AssetMapper     assetMapper;
+    private final CashFlowMapper  cashFlowMapper;
+    private final ForecastService forecastService;
     private final ObjectMapper om = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
-    public GeminiService(ScmService scmService, NoteService noteService) {
-        this.scmService = scmService;
-        this.noteService = noteService;
+    public GeminiService(ScmService scmService, NoteService noteService,
+                         AssetMapper assetMapper, CashFlowMapper cashFlowMapper,
+                         ForecastService forecastService) {
+        this.scmService      = scmService;
+        this.noteService     = noteService;
+        this.assetMapper     = assetMapper;
+        this.cashFlowMapper  = cashFlowMapper;
+        this.forecastService = forecastService;
     }
 
     public ChatResponse chat(String userMessage,
@@ -114,6 +132,157 @@ public class GeminiService {
         String fallback = "처리 단계가 너무 길어져 중단했습니다. 요청을 조금 더 구체적으로 나눠서 말해주세요.";
         emitDone(onProgress, fallback, messages, toolsUsed);
         return new ChatResponse(fallback, messages, toolsUsed);
+    }
+
+    /**
+     * 자산 예측 컨텍스트를 받아 단순 분석 텍스트를 반환 (tool/history 없이 단발 호출).
+     */
+    public String analyzeAssetForecast(Map<String, Object> aiContext) throws Exception {
+        String prompt = buildForecastPrompt(aiContext);
+        // num_predict를 낮게 유지 — 핵심만 짧게 받음
+
+        if ("ollama".equalsIgnoreCase(provider)) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("model", ollamaModel);
+            body.put("stream", false);
+            body.put("messages", List.of(
+                    msg("system", "너는 가계 재정을 분석해주는 친근한 AI 어시스턴트야."),
+                    msg("user", prompt)
+            ));
+            body.put("options", Map.of("temperature", 0.7, "num_predict", 3000));
+
+            HttpResponse<String> res = postJson(trimSlash(ollamaBaseUrl) + "/api/chat", body, Duration.ofSeconds(240));
+            if (res.statusCode() != 200)
+                throw new RuntimeException("Ollama HTTP " + res.statusCode() + ": " + shortBody(res.body()));
+
+            log.debug("[FORECAST-AI] ollama raw: {}", res.body().length() > 300 ? res.body().substring(0, 300) : res.body());
+            Map<String, Object> json = om.readValue(res.body(), new TypeReference<>() {});
+            @SuppressWarnings("unchecked")
+            Map<String, Object> message = (Map<String, Object>) json.get("message");
+            String content = message == null ? "" : str(message.get("content"));
+            return stripThinkTags(content);
+        }
+
+        // Gemini
+        if (geminiApiKey == null || geminiApiKey.isBlank())
+            throw new IllegalStateException("gemini.api.key가 설정되지 않았습니다.");
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("contents", List.of(Map.of(
+                "role", "user",
+                "parts", List.of(Map.of("text", prompt))
+        )));
+        body.put("generationConfig", Map.of("temperature", 0.7, "maxOutputTokens", 8192));
+
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/"
+                + geminiModel + ":generateContent?key=" + geminiApiKey;
+
+        HttpResponse<String> res = postJson(url, body, Duration.ofSeconds(90));
+        if (res.statusCode() != 200)
+            throw new RuntimeException("Gemini HTTP " + res.statusCode() + ": " + shortBody(res.body()));
+
+        Map<String, Object> json = om.readValue(res.body(), new TypeReference<>() {});
+        List<?> candidates = (List<?>) json.get("candidates");
+        if (candidates == null || candidates.isEmpty()) return "";
+        @SuppressWarnings("unchecked")
+        Map<String, Object> candidate = (Map<String, Object>) candidates.get(0);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> content = (Map<String, Object>) candidate.get("content");
+        if (content == null) return "";
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+        if (parts == null) return "";
+        return parts.stream().map(p -> str(p.get("text"))).reduce("", String::concat);
+    }
+
+    @SuppressWarnings("unchecked")
+    private String buildForecastPrompt(Map<String, Object> ctx) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("우리 가족 재정 데이터야. 아래 내용을 바탕으로 다음 항목을 한국어로 분석해줘.\n");
+        sb.append("① 현재 재정 건전성 평가 (저축률·부채비율 포함)\n");
+        sb.append("② 실적과 계획의 차이 분석 (보정 비율 기준)\n");
+        sb.append("③ 시나리오별 미래 전망 (낙관/기준/비관 비교)\n");
+        sb.append("④ 주요 리스크 요인\n");
+        sb.append("⑤ 실천 가능한 개선 조언 2~3가지\n");
+        sb.append("각 항목별로 구체적인 수치를 언급하며 친근하게 설명해줘.\n\n");
+
+        // 현재 상태
+        Map<String,Object> cur = (Map<String,Object>) ctx.get("currentState");
+        if (cur != null) {
+            sb.append("[현재 자산 현황]\n");
+            sb.append("- 총자산: ").append(wons(cur.get("totalAsset"))).append("\n");
+            sb.append("- 총대출: ").append(wons(cur.get("totalLoan"))).append("\n");
+            sb.append("- 순자산: ").append(wons(cur.get("netAsset"))).append("\n\n");
+        }
+
+        // 실적
+        Map<String,Object> hst = (Map<String,Object>) ctx.get("historicalActual");
+        if (hst != null) {
+            sb.append("[전표처리 실적 (").append(hst.get("dataMonths")).append("개월)]\n");
+            sb.append("- 월평균 순자산 변동: ").append(wons(hst.get("avgMonthlyChange"))).append("\n");
+            sb.append("- 월평균 수입: ").append(wons(hst.get("avgIncome"))).append("\n");
+            sb.append("- 월평균 지출: ").append(wons(hst.get("avgExpense"))).append("\n");
+            sb.append("- 평균 저축률: ").append(hst.get("savingRateAvg")).append("%\n\n");
+        }
+
+        // 계획 기준선
+        Map<String,Object> plan = (Map<String,Object>) ctx.get("planBaseline");
+        if (plan != null) {
+            sb.append("[정기 계획 기준]\n");
+            sb.append("- 월 수입계획: ").append(wons(plan.get("avgMonthlyIncome"))).append("\n");
+            sb.append("- 월 지출계획: ").append(wons(plan.get("avgMonthlyExpense"))).append("\n");
+            sb.append("- 월 자산증감 기여: ").append(wons(plan.get("avgMonthlyAssetGain"))).append("\n");
+            Object ratio = plan.get("actualityRatio");
+            if (ratio != null) {
+                double r = ((Number) ratio).doubleValue();
+                sb.append("- 실적/계획 비율: ").append(Math.round(r * 100)).append("% (1.0=계획대로)\n\n");
+            }
+        }
+
+        // 시나리오 결과
+        List<Map<String,Object>> scs = (List<Map<String,Object>>) ctx.get("scenarioResults");
+        if (scs != null && !scs.isEmpty()) {
+            sb.append("[예측 시나리오 결과]\n");
+            for (Map<String,Object> s : scs) {
+                sb.append("- ").append(s.get("weight")).append("% 시나리오: 최종 순자산 ")
+                  .append(wons(s.get("finalNetAsset")))
+                  .append(" (변동 ").append(wons(s.get("totalGain"))).append(")\n");
+            }
+            sb.append("\n");
+        }
+
+        // 주요 수입/지출 항목
+        List<Map<String,Object>> inc = (List<Map<String,Object>>) ctx.get("incomeItems");
+        if (inc != null && !inc.isEmpty()) {
+            sb.append("[주요 수입 항목]\n");
+            inc.forEach(i -> sb.append("- ").append(i.get("name")).append(": ").append(wons(i.get("totalAmount"))).append("\n"));
+            sb.append("\n");
+        }
+        List<Map<String,Object>> exp = (List<Map<String,Object>>) ctx.get("expenseItems");
+        if (exp != null && !exp.isEmpty()) {
+            sb.append("[주요 지출 항목]\n");
+            exp.stream().limit(8).forEach(e -> sb.append("- ").append(e.get("name")).append(": ").append(wons(e.get("totalAmount"))).append("\n"));
+        }
+
+        return sb.toString();
+    }
+
+    private String wons(Object v) {
+        if (v == null) return "0원";
+        long val = ((Number) v).longValue();
+        long abs = Math.abs(val);
+        String sign = val < 0 ? "-" : "";
+        if (abs >= 100_000_000L) return sign + String.format("%.1f억원", abs / 1e8);
+        if (abs >= 10_000L)      return sign + (abs / 10_000L) + "만원";
+        return String.format("%,d원", val);
+    }
+
+    /** gemma4 등 thinking 모델의 <think>...</think> 블록 제거 */
+    private String stripThinkTags(String text) {
+        if (text == null) return "";
+        // <think>...</think> 블록 제거 (dotall)
+        String stripped = text.replaceAll("(?s)<think>.*?</think>", "").trim();
+        return stripped.isBlank() ? text.trim() : stripped; // 제거 후 빈값이면 원본 그대로
     }
 
     public String generateDailyQuote(String userName) {
@@ -298,36 +467,127 @@ public class GeminiService {
             return switch (name) {
                 case "global_search" -> {
                     String keyword = firstText(args.get("keyword"), args.get("q"), args.get("query"));
-                    if (keyword.isBlank()) {
-                        yield confirmRequired("찾을 검색어를 알려주세요.");
-                    }
+                    if (keyword.isBlank()) yield confirmRequired("찾을 검색어를 알려주세요.");
 
-                    emit(onProgress, "status", "메모 정보를 찾고있어요.");
+                    emit(onProgress, "status", "공유메모 검색 중...");
                     List<NoteVO> notes = noteService.searchNotes(familyId, keyword);
 
-                    emit(onProgress, "status", "입금요청 정보를 찾고있어요.");
+                    emit(onProgress, "status", "입금요청 검색 중...");
                     List<ScmVO> deposits = scmService.searchDepositRequests(familyId, keyword);
 
+                    emit(onProgress, "status", "자산원장 검색 중...");
+                    List<AssetVO> assets = assetMapper.searchAssets(familyId, keyword);
+
+                    emit(onProgress, "status", "대출원장 검색 중...");
+                    List<LoanVO> loans = assetMapper.searchLoans(familyId, keyword);
+
+                    emit(onProgress, "status", "정기수입/지출 검색 중...");
+                    List<CashFlowPlanVO> plans = cashFlowMapper.searchPlans(familyId, keyword);
+
                     yield Map.of(
-                            "keyword", keyword,
-                            "notes", notes.stream().map(note -> Map.of(
-                                    "type", "note",
-                                    "noteSeq", note.getNoteSeq(),
-                                    "title", nvl(note.getTitle()),
-                                    "contentPreview", preview(note.getContent()),
-                                    "regId", nvl(note.getRegId()),
-                                    "updatedAt", nvl(note.getUpdDtText())
-                            )).toList(),
-                            "depositRequests", deposits.stream().map(v -> Map.of(
-                                    "type", "depositRequest",
-                                    "depReqSeq", v.getDepReqSeq(),
-                                    "storeInfo", nvl(v.getStoreInfo()),
-                                    "amount", v.getAmount() == null ? 0L : v.getAmount(),
-                                    "reqStatus", nvl(v.getReqStatus()),
-                                    "reqDesc", nvl(v.getReqDesc()),
-                                    "regId", nvl(v.getRegId()),
-                                    "requestDt", nvl(v.getRequestDt())
-                            )).toList()
+                        "keyword", keyword,
+                        "notes", notes.stream().map(n -> Map.of(
+                                "domain", "note", "noteSeq", n.getNoteSeq(),
+                                "title", nvl(n.getTitle()),
+                                "contentPreview", preview(n.getContent()),
+                                "regId", nvl(n.getRegId()),
+                                "updatedAt", nvl(n.getUpdDtText())
+                        )).toList(),
+                        "depositRequests", deposits.stream().map(v -> Map.of(
+                                "domain", "depositRequest", "depReqSeq", v.getDepReqSeq(),
+                                "storeInfo", nvl(v.getStoreInfo()),
+                                "amount", v.getAmount() == null ? 0L : v.getAmount(),
+                                "reqStatus", nvl(v.getReqStatus()),
+                                "reqDesc", nvl(v.getReqDesc()),
+                                "regId", nvl(v.getRegId()),
+                                "requestDt", nvl(v.getRequestDt())
+                        )).toList(),
+                        "assets", assets.stream().map(a -> Map.of(
+                                "domain", "asset", "assetSeq", a.getAssetSeq(),
+                                "assetNm", nvl(a.getAssetNm()),
+                                "assetTypeNm", nvl(a.getAssetTypeNm()),
+                                "liquidYn", nvl(a.getLiquidYn()),
+                                "amount", a.getAmount() == null ? 0L : a.getAmount(),
+                                "disposeYn", nvl(a.getDisposeYn()),
+                                "memo", nvl(a.getMemo())
+                        )).toList(),
+                        "loans", loans.stream().map(l -> Map.of(
+                                "domain", "loan", "loanSeq", l.getLoanSeq(),
+                                "loanNm", nvl(l.getLoanNm()),
+                                "loanAmount", l.getLoanAmount() == null ? 0L : l.getLoanAmount(),
+                                "currentBalance", l.getCurrentBalance() == null ? 0L : l.getCurrentBalance(),
+                                "interestRate", l.getInterestRate() == null ? "" : l.getInterestRate().toPlainString(),
+                                "closeYn", nvl(l.getCloseYn()),
+                                "memo", nvl(l.getMemo())
+                        )).toList(),
+                        "cashFlowPlans", plans.stream().map(p -> Map.of(
+                                "domain", p.getFlowType().equals("INCOME") ? "incomePlan" : "expensePlan",
+                                "planSeq", p.getPlanSeq(),
+                                "planNm", nvl(p.getPlanNm()),
+                                "planTypeNm", nvl(p.getPlanTypeNm()),
+                                "flowType", nvl(p.getFlowType()),
+                                "amount", p.getAmount() == null ? 0L : p.getAmount(),
+                                "cycleDesc", nvl(p.getCycleDesc()),
+                                "useYn", nvl(p.getUseYn()),
+                                "memo", nvl(p.getMemo())
+                        )).toList()
+                    );
+                }
+                case "get_asset_summary" -> {
+                    emit(onProgress, "status", "자산 현황 조회 중...");
+                    AssetSummaryVO s = assetMapper.selectAssetSummary(familyId);
+                    if (s == null) yield Map.of("message", "등록된 자산 데이터가 없습니다.");
+                    Map<String, Object> sm = new LinkedHashMap<>();
+                    sm.put("totalAssetAmount",        safe(s.getTotalAssetAmount()));
+                    sm.put("totalLiquidAssetAmount",  safe(s.getTotalLiquidAssetAmount()));
+                    sm.put("totalFixedAssetAmount",   safe(s.getTotalFixedAssetAmount()));
+                    sm.put("totalInvestAmount",       safe(s.getTotalInvestAmount()));
+                    sm.put("totalLoanBalance",        safe(s.getTotalLoanBalance()));
+                    sm.put("netAssetAmount",          safe(s.getNetAssetAmount()));
+                    sm.put("monthlyIncomeAmount",     safe(s.getMonthlyIncomeAmount()));
+                    sm.put("monthlyExpenseAmount",    safe(s.getMonthlyExpenseAmount()));
+                    sm.put("monthlySavingAmount",     safe(s.getMonthlySavingAmount()));
+                    sm.put("monthlyInvestAmount",     safe(s.getMonthlyInvestAmount()));
+                    sm.put("expectedMonthlyCashFlow", safe(s.getExpectedMonthlyCashFlow()));
+                    yield sm;
+                }
+                case "get_asset_forecast" -> {
+                    emit(onProgress, "status", "자산변동 예측 계산 중...");
+                    Object monthsArg = args.getOrDefault("months", 12);
+                    int months = monthsArg instanceof Number n ? Math.min(n.intValue(), 36) : 12;
+                    Map<String, Object> full = forecastService.calcForecast(familyId, months, new int[]{90, 95, 100, 105, 110});
+
+                    // AI에게 필요한 핵심 요약만 전달 (전체 배열은 토큰 낭비)
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> scenarios = (List<Map<String, Object>>) full.get("scenarios");
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> planSummary = (List<Map<String, Object>>) full.get("planSummary");
+
+                    // 시나리오별 최종값 요약
+                    List<Map<String, Object>> scenarioSummary = scenarios.stream().map(sc -> {
+                        @SuppressWarnings("unchecked")
+                        List<Number> data = (List<Number>) sc.get("data");
+                        long last  = data.isEmpty() ? 0 : data.get(data.size()-1).longValue();
+                        long first = data.isEmpty() ? 0 : data.get(0).longValue();
+                        return Map.<String, Object>of(
+                            "label",   sc.get("label"),
+                            "weight",  sc.get("weight"),
+                            "startNetAsset", first,
+                            "endNetAsset",   last,
+                            "change",        last - first
+                        );
+                    }).toList();
+
+                    yield Map.of(
+                        "forecastMonths",        months,
+                        "currentNetAsset",       full.get("currentNetAsset"),
+                        "totalAsset",            full.get("totalAsset"),
+                        "totalLoan",             full.get("totalLoan"),
+                        "avgMonthlyIncome",      full.get("avgMonthlyIncome"),
+                        "avgMonthlyExpense",     full.get("avgMonthlyExpense"),
+                        "scenarioSummary",       scenarioSummary,
+                        "activePlanCount",       planSummary == null ? 0 : planSummary.size(),
+                        "planSummary",           planSummary == null ? List.of() : planSummary
                     );
                 }
                 case "list_deposit_requests" -> {
@@ -455,46 +715,143 @@ public class GeminiService {
     }
 
     private String systemPrompt(String familyId, String userAuth) {
-        return """
-                당신은 가정용 그룹웨어 ^HOMES의 개인 AI 어시스턴트입니다.
-                HOMES 업무가 필요할 때는 아래 tool 중 하나를 선택해서 처리할 수 있습니다.
+        boolean isManager = "manager".equals(userAuth);
+        String managerTools = isManager ? """
 
-                현재 사용자 권한: %s
-                familyId: %s
+                [관리자 전용 tool]
+                approve_deposit — 입금요청 결재 처리
+                  args : {"depReqSeq": <number>, "reqStatus": "APPROVED|REJECT|STANDBY"}
+                  반환 : {result, depReqSeq, reqStatus}
+                  규칙 : depReqSeq와 reqStatus 둘 다 명확할 때만 실행. reqStatus는 반드시 APPROVED·REJECT·STANDBY 중 하나.
 
-                사용 가능한 tool:
-                - global_search: HOMES 전체 검색. args={"keyword":"검색어"} 공유메모와 입금요청을 순서대로 검색함.
-                - list_deposit_requests: 입금요청 목록 조회. args={}
-                - get_deposit_detail: 입금요청 상세 조회. args={"depReqSeq":번호}
-                - insert_deposit_request: 입금요청 등록. args={"storeInfo":"구매처/품목","amount":금액,"reqDesc":"요청 사유 또는 메모"}
-                - insert_note: 공유메모 등록. args={"title":"제목","content":"내용"}
-                - update_note: 공유메모 수정. args={"noteSeq":번호 또는 "targetTitle":"현재 제목","title":"새 제목","content":"새 내용"} 제목 또는 내용 중 바꿀 값만 포함할 수 있음.
+                delete_deposit — 입금요청 삭제
+                  args : {"depReqSeq": <number>}
+                  반환 : {result, depReqSeq}
+                  규칙 : 번호가 명확할 때만 실행.
+                """ : "";
+
+        return ("""
+                ════════════════════════════════════════
+                ^HOMES 개인 AI 어시스턴트 — 시스템 지침
+                ════════════════════════════════════════
+
+                ## 신원
+                - 가정용 그룹웨어 ^HOMES의 전용 AI 어시스턴트.
+                - 사용자 권한: %s
+                - familyId: %s  (모든 tool은 이 familyId 범위 안에서만 동작함)
+
+                ════════════════════════════════════════
+                ## TOOL 카탈로그
+                ════════════════════════════════════════
+                tool이 필요할 때는 아래 정의된 tool 이름과 args 스키마를 정확히 따르세요.
+                정의되지 않은 tool 이름은 절대 사용하지 마세요.
+
+                ────────────────────────────────────────
+                ### [검색]
+                global_search — HOMES 전체 통합 검색
+                  args : {"keyword": <string>}
+                  반환 : {
+                    keyword,
+                    notes          : [{domain:"note", noteSeq, title, contentPreview, regId, updatedAt}],
+                    depositRequests: [{domain:"depositRequest", depReqSeq, storeInfo, amount, reqStatus, reqDesc, regId, requestDt}],
+                    assets         : [{domain:"asset", assetSeq, assetNm, assetTypeNm, liquidYn, amount, disposeYn, memo}],
+                    loans          : [{domain:"loan", loanSeq, loanNm, loanAmount, currentBalance, interestRate, closeYn, memo}],
+                    cashFlowPlans  : [{domain:"incomePlan"|"expensePlan", planSeq, planNm, planTypeNm, flowType, amount, cycleDesc, useYn, memo}]
+                  }
+                  언제 사용: 사용자가 "찾아줘", "검색해줘", "있어?", "어디에" 등 조회를 요청할 때.
+                  주의: 결과가 비어있으면 "없습니다"라고 정직하게 답하세요. 없는 데이터를 만들지 마세요.
+
+                ────────────────────────────────────────
+                ### [자산관리]
+                get_asset_summary — 자산·부채·현금흐름 현황 요약 조회
+                  args : {}
+                  반환 : {totalAssetAmount, totalLiquidAssetAmount, totalFixedAssetAmount,
+                          totalInvestAmount, totalLoanBalance, netAssetAmount,
+                          monthlyIncomeAmount, monthlyExpenseAmount, monthlySavingAmount,
+                          monthlyInvestAmount, expectedMonthlyCashFlow}
+                  언제 사용: "자산 얼마야?", "순자산", "대출 잔액", "월 지출" 등 현황 질문.
+
+                get_asset_forecast — 향후 자산변동 예측 분석
+                  args : {"months": <number 6~36, default 12>}
+                  반환 : {forecastMonths, currentNetAsset, totalAsset, totalLoan,
+                          avgMonthlyIncome, avgMonthlyExpense,
+                          scenarioSummary: [{label, weight, startNetAsset, endNetAsset, change}],
+                          activePlanCount, planSummary: [{planNm, flowType, amount, totalFires, totalAmount, cycleNum, cycleUnit}]}
+                  언제 사용: "앞으로 자산이 어떻게 돼?", "예측", "미래 순자산", "몇 년 후 자산".
+                  분석 지침:
+                    - weight=50 비관적, weight=100 기준, weight=150 낙관적 시나리오임.
+                    - change > 0 이면 해당 기간 자산 증가, < 0 이면 감소.
+                    - avgMonthlyExpense > avgMonthlyIncome 이면 현금흐름 적자 경고 필요.
+                    - 분석 결과에서 숫자는 반드시 tool 반환값에 있는 숫자만 사용. 직접 계산·추측 금지.
+                    - 직접 데이터를 확인 후 심도 있는 인사이트 도출
+
+                ────────────────────────────────────────
+                ### [입금요청]
+                list_deposit_requests — 입금요청 목록 조회
+                  args : {}
+                  반환 : [{depReqSeq, storeInfo, amount, reqStatus, regId, requestDt}]
+                  상태값: STANDBY=대기중, APPROVED=결재완료, REJECT=반려
+
+                get_deposit_detail — 입금요청 상세 조회
+                  args : {"depReqSeq": <number>}
+                  반환 : {depReqSeq, storeInfo, amount, reqStatus, reqDesc, regId}
+
+                insert_deposit_request — 입금요청 등록
+                  args : {"storeInfo": <string>, "amount": <number>, "reqDesc": <string|optional>}
+                  반환 : {result, depReqSeq, storeInfo, amount, reqStatus}
+                  규칙 : storeInfo와 amount가 명확할 때만 실행. amount는 양수.
+
+                ────────────────────────────────────────
+                ### [공유메모]
+                insert_note — 공유메모 등록
+                  args : {"title": <string>, "content": <string>}
+                  반환 : {result, noteSeq, title}
+
+                update_note — 공유메모 수정
+                  args : {"noteSeq": <number> | "targetTitle": <string>, "title": <string|optional>, "content": <string|optional>}
+                  반환 : {result, noteSeq, title}
+                  규칙 :
+                    - targetTitle은 현재 제목(찾을 대상), title은 새 제목. 혼동하지 마세요.
+                    - noteSeq가 없으면 targetTitle로 찾습니다.
+                    - 대상이 명확하지만 수정할 내용이 없으면 tool을 실행해 존재 확인 후 무엇을 수정할지 질문하세요.
                 %s
+                ════════════════════════════════════════
+                ## 할루시네이션 방지 규칙 (반드시 준수)
+                ════════════════════════════════════════
+                1. tool 결과에 없는 데이터는 절대 언급하지 마세요.
+                2. tool을 실행하기 전에 데이터를 가정하거나 추측하지 마세요.
+                3. 금액·날짜·횟수 등 수치는 tool 반환값을 그대로 사용. 자체 계산 금지.
+                4. "아마", "아마도", "약", "추정" 같은 표현을 사용할 때는 반드시 근거(tool 결과)를 명시하세요.
+                5. tool 결과가 빈 배열이면 "없습니다"로 정직하게 답하세요.
+                6. 존재하지 않는 tool 이름을 사용하지 마세요.
+                7. 사용자가 "그거", "아까 것", "최근 것"처럼 모호하게 말하면 구체적으로 무엇인지 먼저 확인하세요.
+                8. 변경·삭제 tool은 대상과 변경값이 모두 확실할 때만 실행하세요.
 
-                업데이트 tool 실행 규칙:
-                - update_note는 noteSeq가 없어도 사용자가 "김치 메모"처럼 현재 제목을 말하면 targetTitle에 그 제목을 넣어 실행하세요.
-                - update_note에서 대상 제목은 targetTitle, 새 제목은 title입니다. 둘을 섞지 마세요.
-                - update_note에서 대상은 명확하지만 변경할 값이 없으면 tool을 실행해 대상 존재 여부를 확인한 뒤 무엇을 수정할지 물어보세요.
-                - approve_deposit처럼 기존 데이터를 바꾸는 tool은 대상 번호와 변경할 값이 모두 명확할 때만 실행하세요.
-                - 대상 번호, 변경할 필드, 변경할 값 중 하나라도 추측해야 한다면 tool을 실행하지 말고 {"reply":"확인 질문"} 형태로 먼저 다시 물어보세요.
-                - 사용자가 "그거", "아까 것", "최근 것"처럼 애매하게 말하면 반드시 어떤 항목인지 번호나 내용을 확인하세요.
+                ════════════════════════════════════════
+                ## 응답 형식 (엄격히 준수)
+                ════════════════════════════════════════
+                반드시 JSON 하나만 응답하세요. markdown 코드블록(```json 형식) 절대 사용 금지.
 
-                반드시 JSON 하나만 응답하세요. markdown 코드블록은 쓰지 마세요.
-                일반 대화 답변:
+                일반 대화:
                 {"reply":"답변 내용"}
 
-                tool 실행이 필요한 경우:
-                {"tool":"list_deposit_requests","args":{}}
+                tool 실행:
+                {"tool":"tool_name","args":{...}}
 
-                tool 결과를 받은 뒤에는 사용자가 이해하기 쉬운 자연어로 최종 답변하세요.
-                사용자가 "찾아줘", "검색해줘", "어디 있어", "관련된 것 보여줘"처럼 말하면 global_search를 우선 사용하세요.
-                상태 표기: STANDBY=대기, APPROVED=결재완료, REJECT=반려.
-                """.formatted(
-                "manager".equals(userAuth) ? "관리자" : "일반 사용자",
+                tool 결과를 받은 후 최종 답변:
+                {"reply":"사용자가 이해하기 쉬운 자연어 답변"}
+
+                ════════════════════════════════════════
+                ## 대화 스타일
+                ════════════════════════════════════════
+                - 친근하되 간결하게. 불필요한 수식어나 과도한 공손함 지양.
+                - 금액은 "2,500,000원" 또는 "250만원" 형태로 가독성 있게.
+                - 자산/대출 분석 시 핵심 인사이트(주의점, 리스크, 개선점)를 함께 제시.
+                - HOMES 외부의 개인정보나 금융 정보는 다루지 않음.
+                """).formatted(
+                isManager ? "관리자" : "일반 사용자",
                 familyId,
-                "manager".equals(userAuth)
-                        ? "- approve_deposit: 입금요청 결재 처리. args={\"depReqSeq\":번호,\"reqStatus\":\"APPROVED|REJECT|STANDBY\"}\n- delete_deposit: 입금요청 삭제. args={\"depReqSeq\":번호}"
-                        : ""
+                managerTools
         );
     }
 
@@ -557,7 +914,7 @@ public class GeminiService {
     }
 
     private String modelLabel() {
-        return "HOMES Assistant";
+        return "H-Ops AI";
         //return "ollama".equalsIgnoreCase(provider) ? "Ollama " + ollamaModel : "Gemini " + geminiModel;
     }
 
@@ -668,5 +1025,9 @@ public class GeminiService {
 
     private Map<String, Object> confirmRequired(String message) {
         return Map.of("confirmRequired", true, "message", message);
+    }
+
+    private long safe(Long v) {
+        return v != null ? v : 0L;
     }
 }

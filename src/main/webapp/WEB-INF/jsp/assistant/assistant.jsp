@@ -164,14 +164,32 @@
       overflow-y: auto;
       border-radius: 18px;
       border: 1px solid rgba(17, 24, 39, .15);
+      background: #fff;
       padding: 10px 13px;
       font-size: 16px;
       line-height: 1.45;
+      transition:
+        border-color .2s ease,
+        background-position .35s ease,
+        box-shadow .25s ease;
     }
     .chat-input-bar textarea:focus {
       outline: none;
-      border-color: #1e40af;
-      box-shadow: 0 0 0 2px rgba(30, 64, 175, .14);
+      border-color: transparent;
+      background:
+        linear-gradient(#fff, #fff) padding-box,
+        linear-gradient(120deg, #38bdf8, #2563eb, #1e3a8a, #38bdf8) border-box;
+      background-size: 100% 100%, 220% 220%;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.85) inset,
+        0 0 0 3px rgba(56, 189, 248, .13),
+        0 0 22px rgba(37, 99, 235, .18),
+        0 8px 20px rgba(30, 58, 138, .16);
+      animation: homesChatInputAura 2.4s linear infinite;
+    }
+    @keyframes homesChatInputAura {
+      0% { background-position: 0 0, 0% 50%; }
+      100% { background-position: 0 0, 220% 50%; }
     }
     .send-btn {
       flex: 0 0 42px;
@@ -212,7 +230,7 @@
         <div class="chat-head d-flex align-items-center gap-2">
           <%--<div class="homes-badge">AI</div>--%>
           <div>
-            <div class="fw-semibold">AI Assistant</div>
+            <div class="fw-semibold">H-Ops AI</div>
             <div class="text-muted small">개인 대화와 HOMES 업무 처리를 함께 도와드립니다.</div>
           </div>
         </div>
