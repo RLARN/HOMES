@@ -1,5 +1,6 @@
 package com.eksystems.homes.asset.mapper;
 
+import com.eksystems.homes.asset.vo.CashFlowPlanVO;
 import com.eksystems.homes.asset.vo.CostCenterStatusVO;
 import com.eksystems.homes.asset.vo.CostCenterVO;
 import org.apache.ibatis.annotations.Param;
@@ -53,4 +54,7 @@ public interface CostCenterMapper {
 
     /** 비용센터 현황: 비용센터별 수입/지출 집계 */
     List<CostCenterStatusVO> selectStatusList(@Param("familyId") String familyId);
+
+    /** 수지계정별 지출 항목 전체 (패밀리 단위 한 번에 조회, ccSeq 기준 그룹핑용) */
+    List<CashFlowPlanVO> selectExpensePlansWithCC(String familyId);
 }

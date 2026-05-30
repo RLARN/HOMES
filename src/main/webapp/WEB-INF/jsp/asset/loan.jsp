@@ -117,7 +117,7 @@
                   </c:when>
                   <c:otherwise>
                     <c:forEach var="l" items="${loanList}">
-                      <tr onclick="location.href='${pageContext.request.contextPath}/asset/loan/form?loanSeq=${l.loanSeq}'"
+                      <tr onclick="HOMES.go('${pageContext.request.contextPath}/asset/loan/form?loanSeq=${l.loanSeq}')"
                           style="cursor:pointer;">
                         <td>
                           <div class="fw-semibold text-truncate" style="max-width:240px;">

@@ -74,7 +74,7 @@
                       <c:set var="isThis" value="${exp.expYymm == thisMonth}"/>
                       <tr class="${isThis ? 'table-primary' : ''}"
                           style="cursor:pointer;"
-                          onclick="location.href='${pageContext.request.contextPath}/living/expense/${exp.expYymm}'">
+                          onclick="HOMES.go('${pageContext.request.contextPath}/living/expense/${exp.expYymm}')">
                         <td>
                           <span class="fw-semibold">
                             ${exp.expYymm.substring(0,4)}년 ${exp.expYymm.substring(4,6)}월

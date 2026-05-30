@@ -277,6 +277,15 @@
 	  background: rgba(255,255,255,.70);
 	}
 	.homes-quote { font-size: 16px; font-weight: 800; color: #111827; }
+
+	.homes-section-label {
+	  font-size: 11px;
+	  font-weight: 700;
+	  letter-spacing: 0.14em;
+	  color: #6b7280;
+	  text-transform: uppercase;
+	  margin-bottom: 10px;
+	}
 </style>
 
 <script>

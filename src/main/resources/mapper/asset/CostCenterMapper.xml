@@ -186,16 +186,62 @@
                ON ip.PLAN_SEQ  = c.INCOME_PLAN_SEQ
               AND ip.DEL_YN   = 'N'
         LEFT JOIN CASH_FLOW_PLAN_MST ep
-               ON ep.COST_CENTER_TYPE = 'CC'
-              AND ep.COST_CENTER_SEQ  = c.CC_SEQ
-              AND ep.DEL_YN           = 'N'
-              AND ep.USE_YN           = 'Y'
+               ON ep.DEL_YN  = 'N'
+              AND ep.USE_YN  = 'Y'
+              AND (
+                    (ep.COST_CENTER_TYPE = 'CC' AND ep.COST_CENTER_SEQ = c.CC_SEQ)
+                 OR (c.SOURCE_PLAN_SEQ IS NOT NULL AND ep.PLAN_SEQ = c.SOURCE_PLAN_SEQ)
+                  )
         WHERE c.FAMILY_ID = #{familyId}
           AND c.DEL_YN    = 'N'
           AND c.USE_YN    = 'Y'
         GROUP BY c.CC_SEQ, c.CC_NM, c.CC_TYPE,
                  c.SOURCE_PLAN_SEQ, c.INCOME_PLAN_SEQ, ip.PLAN_NM, ip.AMOUNT
         ORDER BY c.SORT_ORDER, c.CC_SEQ
+    </select>
+
+    <!--
+        수지계정별 지출 항목 전체 조회 (한 번에 패밀리 전체)
+        CashFlowPlanVO.costCenterSeq 에 c.CC_SEQ 를 매핑하여
+        Java 측에서 ccSeq 기준으로 그룹핑한다.
+    -->
+    <select id="selectExpensePlansWithCC"
+            parameterType="string"
+            resultType="com.eksystems.homes.asset.vo.CashFlowPlanVO">
+        SELECT
+            c.CC_SEQ           AS costCenterSeq,
+            p.PLAN_SEQ         AS planSeq,
+            p.PLAN_NM          AS planNm,
+            p.FLOW_TYPE        AS flowType,
+            COALESCE(t.PLAN_TYPE_NM, p.FLOW_TYPE) AS planTypeNm,
+            p.AMOUNT           AS amount,
+            p.CYCLE_NUM        AS cycleNum,
+            p.CYCLE_UNIT       AS cycleUnit,
+            CONCAT('매 ', p.CYCLE_NUM,
+                CASE p.CYCLE_UNIT
+                    WHEN 'DAY'   THEN '일'
+                    WHEN 'MONTH' THEN '개월'
+                    WHEN 'YEAR'  THEN '년'
+                    ELSE '' END,
+                CASE WHEN p.CYCLE_UNIT = 'YEAR' AND p.CYCLE_BASE_MONTH IS NOT NULL
+                     THEN CONCAT(' ', p.CYCLE_BASE_MONTH, '월') ELSE '' END,
+                CASE WHEN p.CYCLE_BASE_DAY IS NOT NULL
+                     THEN CONCAT(' ', p.CYCLE_BASE_DAY, '일') ELSE '' END
+            )                  AS cycleDesc,
+            p.USE_YN           AS useYn
+        FROM COST_CENTER_MST c
+        INNER JOIN CASH_FLOW_PLAN_MST p
+            ON  p.FAMILY_ID = c.FAMILY_ID
+            AND p.DEL_YN    = 'N'
+            AND (
+                  (p.COST_CENTER_TYPE = 'CC' AND p.COST_CENTER_SEQ = c.CC_SEQ)
+               OR (c.SOURCE_PLAN_SEQ IS NOT NULL AND p.PLAN_SEQ = c.SOURCE_PLAN_SEQ)
+                )
+        LEFT JOIN CASH_FLOW_TYPE_CD t ON t.PLAN_TYPE = p.PLAN_TYPE
+        WHERE c.FAMILY_ID = #{familyId}
+          AND c.DEL_YN    = 'N'
+          AND c.USE_YN    = 'Y'
+        ORDER BY c.CC_SEQ, p.FLOW_TYPE, p.PLAN_SEQ
     </select>
 
     <select id="countByIncomePlanSeq" resultType="int">

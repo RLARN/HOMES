@@ -52,16 +52,25 @@
         </div>
       </div>
 
-      <!-- KPI cards -->
-      <div class="row g-3 mb-4">
+      <!-- KPI cards: 자산 4 + 워크스페이스 3 -->
+      <div class="homes-section-label">Asset</div>
+      <div class="row g-3 mb-2">
+        <%-- 총 자산 --%>
         <div class="col-12 col-md-6 col-xl-3">
           <div class="card homes-card">
             <div class="card-body">
               <div class="d-flex align-items-start justify-content-between">
                 <div>
                   <div class="text-muted small">총 자산</div>
-                  <div class="h4 mb-1 fw-bold">8,223,000,000 KRW</div>
-                  <div class="small text-muted">전월 대비 <span class="text-success fw-semibold">21% 증가</span></div>
+                  <div class="h4 mb-1 fw-bold">
+                    <fmt:formatNumber value="${assetSummary.totalAssetAmount}" pattern="#,##0" />
+                    <span class="fs-6 fw-normal text-muted">원</span>
+                  </div>
+                  <div class="small text-muted">순자산
+                    <span class="fw-semibold text-dark">
+                      <fmt:formatNumber value="${assetSummary.netAssetAmount}" pattern="#,##0" />원
+                    </span>
+                  </div>
                 </div>
                 <div class="homes-badge">Asset</div>
               </div>
@@ -69,46 +78,116 @@
           </div>
         </div>
 
+        <%-- 대출 잔액 --%>
         <div class="col-12 col-md-6 col-xl-3">
           <div class="card homes-card">
             <div class="card-body">
               <div class="d-flex align-items-start justify-content-between">
                 <div>
-                  <div class="text-muted small">연간 자산 증가율</div>
-                  <div class="h4 mb-1 fw-bold">21.38%</div>
-                  <div class="small text-muted">전년 대비 <span class="text-success fw-semibold">+424,000,000 KRW</span></div>
+                  <div class="text-muted small">대출 잔액</div>
+                  <div class="h4 mb-1 fw-bold">
+                    <fmt:formatNumber value="${assetSummary.totalLoanBalance}" pattern="#,##0" />
+                    <span class="fs-6 fw-normal text-muted">원</span>
+                  </div>
+                  <div class="small text-muted">현재 대출 총액</div>
                 </div>
-                <div class="homes-badge">Asset</div>
+                <div class="homes-badge">Loan</div>
               </div>
             </div>
           </div>
         </div>
 
+        <%-- 월 저축 가능금액 --%>
         <div class="col-12 col-md-6 col-xl-3">
           <div class="card homes-card">
             <div class="card-body">
               <div class="d-flex align-items-start justify-content-between">
                 <div>
-                  <div class="text-muted small">이번달 지출</div>
-                  <div class="h4 mb-1 fw-bold">3,450,000 KRW</div>
-                  <div class="small text-muted">전월 대비 <span class="text-danger fw-semibold">8% 증가</span></div>
-                </div>
-                <div class="homes-badge">Spend</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-12 col-md-6 col-xl-3">
-          <div class="card homes-card">
-            <div class="card-body">
-              <div class="d-flex align-items-start justify-content-between">
-                <div>
-                  <div class="text-muted small">월 저축률</div>
-                  <div class="h4 mb-1 fw-bold">34.2%</div>
-                  <div class="small text-muted">목표 대비 <span class="text-success fw-semibold">+4.2%p 초과</span></div>
+                  <div class="text-muted small">월 저축 가능금액</div>
+                  <div class="h4 mb-1 fw-bold">
+                    <fmt:formatNumber value="${assetSummary.monthlySavingAmount}" pattern="#,##0" />
+                    <span class="fs-6 fw-normal text-muted">원</span>
+                  </div>
+                  <div class="small text-muted">수입 - 지출 기준</div>
                 </div>
                 <div class="homes-badge">Save</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <%-- 월 예상 현금흐름 --%>
+        <div class="col-12 col-md-6 col-xl-3">
+          <div class="card homes-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start justify-content-between">
+                <div>
+                  <div class="text-muted small">월 예상 현금흐름</div>
+                  <div class="h4 mb-1 fw-bold">
+                    <fmt:formatNumber value="${assetSummary.expectedMonthlyCashFlow}" pattern="#,##0" />
+                    <span class="fs-6 fw-normal text-muted">원</span>
+                  </div>
+                  <div class="small text-muted">정기수입 - 정기지출</div>
+                </div>
+                <div class="homes-badge">Flow</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="homes-section-label mt-3">Workspace</div>
+      <div class="row g-3 mb-4">
+        <%-- 이번달 입금요청 금액 --%>
+        <div class="col-12 col-md-4">
+          <div class="card homes-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start justify-content-between">
+                <div>
+                  <div class="text-muted small">이번달 입금요청 금액</div>
+                  <div class="h4 mb-1 fw-bold">
+                    <fmt:formatNumber value="${requestedTotal}" pattern="#,##0" />
+                    <span class="fs-6 fw-normal text-muted">원</span>
+                  </div>
+                  <div class="small text-muted">당월 누적</div>
+                </div>
+                <div class="homes-badge">Budget</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <%-- 결재 대기 --%>
+        <div class="col-12 col-md-4">
+          <div class="card homes-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start justify-content-between">
+                <div>
+                  <div class="text-muted small">결재 대기</div>
+                  <div class="h4 mb-1 fw-bold">${requestedStandbyCount}
+                    <span class="fs-6 fw-normal text-muted">건</span>
+                  </div>
+                  <div class="small text-muted">처리 필요</div>
+                </div>
+                <div class="homes-badge">Appr</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <%-- 공유 메모 --%>
+        <div class="col-12 col-md-4">
+          <div class="card homes-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start justify-content-between">
+                <div>
+                  <div class="text-muted small">공유 메모</div>
+                  <div class="h4 mb-1 fw-bold">${noteCount}
+                    <span class="fs-6 fw-normal text-muted">건</span>
+                  </div>
+                  <div class="small text-muted">가족 공유 중</div>
+                </div>
+                <div class="homes-badge">Note</div>
               </div>
             </div>
           </div>
@@ -187,12 +266,12 @@
                 <button class="btn btn-primary homes-pill" type="button">구매요청 작성</button>
 				<button class="btn btn-outline-primary homes-pill"
 				        type="button"
-				        onclick="location.href='${pageContext.request.contextPath}/scm/deposit/depositRequest'">
+				        onclick="HOMES.go('${pageContext.request.contextPath}/scm/deposit/depositRequest')">
 				  입금요청 작성
 				</button>
                 <button class="btn btn-outline-secondary homes-pill"
                         type="button"
-                        onclick="location.href='${pageContext.request.contextPath}/note/form'">
+                        onclick="HOMES.go('${pageContext.request.contextPath}/note/form')">
                   메모 남기기
                 </button>
               </div>

@@ -3,7 +3,8 @@
 <div class="offcanvas-lg offcanvas-start homes-sidebar" tabindex="-1" id="homesSidebar">
   <div class="offcanvas-header d-lg-none">
     <h5 class="offcanvas-title">메뉴</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <button type="button" class="btn-close" aria-label="Close"
+            onclick="bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('homesSidebar')).hide()"></button>
   </div>
 
   <div class="offcanvas-body p-0">
@@ -35,7 +36,8 @@
         <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/assistant">AI Assistant</a>
         <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/note/list">공유메모</a>
         <a class="list-group-item list-group-item-action disabled" href="#">DMS (증명서) <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a>
-        <a class="list-group-item list-group-item-action disabled" href="#">구글 캘린더 <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a>
+        <a class="list-group-item list-group-item-action"
+           href="${pageContext.request.contextPath}/calendar/google">구글 캘린더</a>
         <a class="list-group-item list-group-item-action disabled" href="#">가족 앨범(SNS) <span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span></a>
 
 
@@ -70,7 +72,7 @@
         <button class="btn btn-light homes-quick-btn" type="button" disabled>+ 구매요청 (준비중)</button>
         --%>
         <button class="btn btn-outline-light homes-quick-btn-outline" type="button"
-		        onclick="location.href='${pageContext.request.contextPath}/scm/deposit/depositRequest'">
+		        onclick="HOMES.go('${pageContext.request.contextPath}/scm/deposit/depositRequest')">
 		  + 입금요청
 		</button>
       </div>
@@ -178,7 +180,7 @@
       e.preventDefault();
       const keyword = input.value.trim();
       if (!keyword) return;
-      location.href = '${pageContext.request.contextPath}/assistant?search=' + encodeURIComponent(keyword);
+      HOMES.go('${pageContext.request.contextPath}/assistant?search=' + encodeURIComponent(keyword));
     });
   })();
 </script>

@@ -1,6 +1,9 @@
 package com.eksystems.homes.asset.vo;
 
+import com.eksystems.homes.asset.vo.CashFlowPlanVO;
+import com.eksystems.homes.living.vo.LivingIncomeMstVO;
 import lombok.Data;
+import java.util.List;
 
 @Data
 public class CostCenterStatusVO {
@@ -24,4 +27,11 @@ public class CostCenterStatusVO {
     private Long totalExpenseAmt;
     /** 잔액 (수입 - 지출) */
     private Long balance;
+
+    // ── 하위 항목 (화면 전용) ──────────────────────────────
+    /** 이 수지계정에 연결된 지출 항목 목록 (정기지출 계획) */
+    private List<CashFlowPlanVO> expensePlans;
+
+    /** 이 수지계정의 수기 현금흐름 항목 목록 (LIVING_INCOME_MST) */
+    private List<LivingIncomeMstVO> manualEntries;
 }

@@ -66,7 +66,7 @@
                     </c:when>
                     <c:otherwise>
                       <c:forEach var="note" items="${noteList}">
-                        <tr onclick="location.href='${pageContext.request.contextPath}/note/detail?noteSeq=${note.noteSeq}'"
+                        <tr onclick="HOMES.go('${pageContext.request.contextPath}/note/detail?noteSeq=${note.noteSeq}')"
                             style="cursor:pointer;">
                           <td>
                             <div class="fw-semibold text-truncate" style="max-width: 720px;">

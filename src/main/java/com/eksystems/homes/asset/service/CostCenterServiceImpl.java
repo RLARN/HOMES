@@ -10,7 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class CostCenterServiceImpl implements CostCenterService {
@@ -193,6 +196,18 @@ public class CostCenterServiceImpl implements CostCenterService {
             existing.setUpdId(userId);
             costCenterMapper.update(existing);
         }
+    }
+
+    @Override
+    public Map<Long, List<CashFlowPlanVO>> getExpensePlanMapByCC(String familyId) {
+        List<CashFlowPlanVO> all = costCenterMapper.selectExpensePlansWithCC(familyId);
+        // costCenterSeq 에 c.CC_SEQ 가 담겨 있음 (SQL 쿼리 참고)
+        return all.stream()
+                .filter(p -> p.getCostCenterSeq() != null)
+                .collect(Collectors.groupingBy(
+                        CashFlowPlanVO::getCostCenterSeq,
+                        LinkedHashMap::new,
+                        Collectors.toList()));
     }
 
     @Override

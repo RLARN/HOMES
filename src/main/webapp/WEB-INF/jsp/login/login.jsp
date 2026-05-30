@@ -9,6 +9,7 @@
 
   <!-- CSS: /static/css 아래에 두고 contextPath로 접근 -->
   <link rel="stylesheet" href="${pageContext.request.contextPath}/css/homes-login.css" />
+  <script src="${pageContext.request.contextPath}/js/homes-progress.js"></script>
 </head>
 <body>
   <div class="login-wrapper">
@@ -212,6 +213,9 @@
 
 <script>
 $(function () {
+    function hideLoginProgress() {
+        $('#homesOverlay').removeClass('is-active');
+    }
 
     // familyId: localStorage에서 마지막 입력값 복원
     var savedFamilyId = localStorage.getItem('homes_familyId');
@@ -234,14 +238,15 @@ $(function () {
             data: { familyId: familyId, userId: userId, userPwd: userPwd },
             success: function (res) {
                 if (res === true) {
-                    // 로그인 성공 시 familyId 저장
                     localStorage.setItem('homes_familyId', familyId);
-                    location.href = '${pageContext.request.contextPath}/main';
+                    HOMES.go('${pageContext.request.contextPath}/main');
                 } else {
+                    hideLoginProgress();
                     $('#loginAlert').removeClass('d-none');
                 }
             },
             error: function () {
+                hideLoginProgress();
                 $('#loginAlert').text('서버 오류가 발생했습니다.').removeClass('d-none');
             }
         });

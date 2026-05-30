@@ -85,10 +85,11 @@
             <table class="table align-middle homes-table mb-0">
               <thead class="table-light">
                 <tr>
-                  <th style="width:100px;">구분</th>
-                  <th>수지계정</th>
-                  <th class="text-end" style="width:160px;">금액</th>
-                  <th>메모</th>
+                  <th style="width:80px;">구분</th>
+                  <th style="width:140px;" class="text-nowrap">수지계정</th>
+                  <th>제목</th>
+                  <th class="text-end" style="width:150px;">금액</th>
+                  <th style="width:90px;" class="text-nowrap">등록일</th>
                   <th style="width:80px;" class="text-center">관리</th>
                 </tr>
               </thead>
@@ -96,7 +97,7 @@
                 <c:choose>
                   <c:when test="${empty cashflowList}">
                     <tr>
-                      <td colspan="5" class="text-center text-muted py-5 fst-italic">
+                      <td colspan="6" class="text-center text-muted py-5 fst-italic">
                         등록된 내역이 없습니다. [+ 등록] 버튼을 눌러 추가하세요.
                       </td>
                     </tr>
@@ -107,7 +108,7 @@
                       <!-- 구분 헤더 행 -->
                       <c:if test="${cf.flowType != prevType}">
                         <tr class="table-secondary">
-                          <td colspan="5" class="fw-semibold" style="font-size:13px;">
+                          <td colspan="6" class="fw-semibold" style="font-size:13px;">
                             <c:choose>
                               <c:when test="${cf.flowType == 'INCOME'}">💰 수입</c:when>
                               <c:otherwise>💸 지출</c:otherwise>
@@ -122,14 +123,27 @@
                             ${cf.flowType == 'INCOME' ? '수입' : '지출'}
                           </span>
                         </td>
-                        <td class="fw-semibold">${cf.ccNm}</td>
-                        <td class="text-end fw-semibold ${cf.flowType == 'INCOME' ? 'text-success' : 'text-danger'}">
+                        <td class="fw-semibold text-nowrap"><c:out value="${cf.ccNm}"/></td>
+                        <td>
+                          <c:choose>
+                            <c:when test="${not empty cf.title}">
+                              <span class="fw-semibold"><c:out value="${cf.title}"/></span>
+                              <c:if test="${not empty cf.memo}">
+                                <div class="text-muted small text-truncate" style="max-width:260px;"><c:out value="${cf.memo}"/></div>
+                              </c:if>
+                            </c:when>
+                            <c:otherwise>
+                              <span class="text-muted small"><c:out value="${cf.memo}"/></span>
+                            </c:otherwise>
+                          </c:choose>
+                        </td>
+                        <td class="text-end fw-semibold text-nowrap ${cf.flowType == 'INCOME' ? 'text-success' : 'text-danger'}">
                           <fmt:formatNumber value="${cf.actualAmt}" pattern="#,##0"/> 원
                         </td>
-                        <td class="text-muted small">${cf.memo}</td>
-                        <td class="text-center">
+                        <td class="text-muted small text-nowrap">${cf.regDtStr}</td>
+                        <td class="text-center text-nowrap">
                           <button class="btn btn-sm btn-link p-0 text-muted me-1"
-                                  onclick="openModal(${cf.incomeSeq}, ${cf.ccSeq}, '${cf.flowType}', ${cf.actualAmt}, '${cf.memo}')"
+                                  onclick="openModal(${cf.incomeSeq}, ${cf.ccSeq}, '${cf.flowType}', ${cf.actualAmt}, '<c:out value="${cf.title}"/>', '<c:out value="${cf.memo}"/>')"
                                   title="수정">✏️</button>
                           <button class="btn btn-sm btn-link p-0 text-danger"
                                   onclick="deleteCf(${cf.incomeSeq})"
@@ -139,21 +153,21 @@
                     </c:forEach>
                     <!-- 합계 -->
                     <tr class="table-light fw-bold">
-                      <td colspan="2" class="text-end">수입 합계</td>
+                      <td colspan="3" class="text-end">수입 합계</td>
                       <td class="text-end text-success">
                         <fmt:formatNumber value="${incomeTotal}" pattern="#,##0"/> 원
                       </td>
                       <td colspan="2"></td>
                     </tr>
                     <tr class="table-light fw-bold">
-                      <td colspan="2" class="text-end">지출 합계</td>
+                      <td colspan="3" class="text-end">지출 합계</td>
                       <td class="text-end text-danger">
                         <fmt:formatNumber value="${expenseTotal}" pattern="#,##0"/> 원
                       </td>
                       <td colspan="2"></td>
                     </tr>
                     <tr class="fw-bold" style="background:#f0fdf4; border-top:2px solid #bbf7d0;">
-                      <td colspan="2" class="text-end">순손익</td>
+                      <td colspan="3" class="text-end">순손익</td>
                       <td class="text-end fs-6 ${netBalance >= 0 ? 'text-success' : 'text-danger'}">
                         ${netBalance >= 0 ? '+' : ''}<fmt:formatNumber value="${netBalance}" pattern="#,##0"/> 원
                       </td>
@@ -208,6 +222,11 @@
             </c:forEach>
           </select>
         </div>
+        <!-- 제목 -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold">제목 <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="cfTitle" placeholder="예: 5월 월급, 카드값 납부" maxlength="200" required/>
+        </div>
         <!-- 금액 -->
         <div class="mb-3">
           <label class="form-label fw-semibold" id="amtLabel">금액</label>
@@ -260,11 +279,12 @@ function onCcChange(sel) {
   }
 }
 
-function openModal(seq, ccSeq, flowType, amt, memo) {
-  document.getElementById('cfSeq').value  = seq  || '';
+function openModal(seq, ccSeq, flowType, amt, title, memo) {
+  document.getElementById('cfSeq').value   = seq   || '';
   document.getElementById('cfCcSeq').value = ccSeq || '';
-  document.getElementById('cfAmt').value  = amt ? Number(amt).toLocaleString('ko-KR') : '';
-  document.getElementById('cfMemo').value = memo || '';
+  document.getElementById('cfAmt').value   = amt ? Number(amt).toLocaleString('ko-KR') : '';
+  document.getElementById('cfTitle').value = title || '';
+  document.getElementById('cfMemo').value  = memo  || '';
 
   const isIncome = !flowType || flowType === 'INCOME';
   document.getElementById('ftIncome').checked  = isIncome;
@@ -273,17 +293,20 @@ function openModal(seq, ccSeq, flowType, amt, memo) {
 
   document.getElementById('cfModalTitle').textContent = seq ? '수기 현금흐름 수정' : '수기 현금흐름 등록';
   modal.show();
-  setTimeout(() => document.getElementById('cfCcSeq').focus(), 300);
+  setTimeout(() => document.getElementById('cfTitle').focus(), 300);
 }
 
 function saveCf() {
-  const ccSeq = document.getElementById('cfCcSeq').value;
-  const amt   = parseAmt(document.getElementById('cfAmt').value);
-  if (!ccSeq) { alert('수지계정를 선택하세요.'); return; }
+  const ccSeq  = document.getElementById('cfCcSeq').value;
+  const title  = document.getElementById('cfTitle').value.trim();
+  const amt    = parseAmt(document.getElementById('cfAmt').value);
+  if (!ccSeq)  { alert('수지계정을 선택하세요.'); return; }
+  if (!title)  { alert('제목을 입력하세요.'); return; }
   const flowType = document.querySelector('input[name="cfFlowType"]:checked').value;
   const payload  = {
     incomeSeq:   document.getElementById('cfSeq').value || null,
     ccSeq:       ccSeq,
+    title:       title,
     flowType:    flowType,
     incomeYymm:  yymm,
     actualAmt:   amt,

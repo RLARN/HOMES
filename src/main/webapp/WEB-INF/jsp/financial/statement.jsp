@@ -100,8 +100,21 @@
           <h1 class="h4 fw-bold mb-1">재무제표 명세서</h1>
           <div class="text-muted small">수지계정 기준 손익 · 자산현황 · 참고자료</div>
         </div>
-        <div class="d-flex gap-2 mt-1">
+        <div class="d-flex gap-2 mt-1 flex-wrap">
           <c:if test="${mode == 'monthly'}">
+            <%-- 최신본/전표처리본 토글 --%>
+            <c:if test="${hasSnapshot}">
+              <div class="btn-group" role="group">
+                <a href="${pageContext.request.contextPath}/financial/statement?mode=${mode}&period=${period}&viewMode=live"
+                   class="btn homes-pill btn-sm ${viewMode == 'live' ? 'btn-primary' : 'btn-outline-primary'}">
+                  ⚡ 최신본
+                </a>
+                <a href="${pageContext.request.contextPath}/financial/statement?mode=${mode}&period=${period}&viewMode=snapshot"
+                   class="btn homes-pill btn-sm ${viewMode == 'snapshot' ? 'btn-warning' : 'btn-outline-warning'}">
+                  📌 전표처리본
+                </a>
+              </div>
+            </c:if>
             <button id="snapshotBtn" class="btn btn-outline-primary homes-pill px-3" onclick="doSnapshot()">
               📌 전표처리
             </button>
@@ -141,10 +154,18 @@
       </div>
 
       <!-- 기간 표시 -->
-      <div class="d-flex align-items-center gap-2 mb-3">
+      <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
         <span class="homes-badge">${mode=='monthly'?'월간':'연간'}</span>
         <h5 class="mb-0 fw-bold">${dispPeriod}</h5>
         <c:if test="${months>1}"><span class="text-muted small">(12개월 합산)</span></c:if>
+        <c:choose>
+          <c:when test="${useSnapshot}">
+            <span class="badge bg-warning text-dark" style="font-size:11px;">📌 전표처리본</span>
+          </c:when>
+          <c:when test="${hasSnapshot}">
+            <span class="badge bg-primary-subtle text-primary border" style="font-size:11px;">⚡ 최신본</span>
+          </c:when>
+        </c:choose>
       </div>
 
       <%-- ═══════════════════════════════════════════════════════
@@ -229,9 +250,12 @@
                           <tr style="border-bottom:1px solid #f1f5f9;">
                             <td style="padding:.35rem 1rem .35rem 2.5rem; color:#64748b;">
                               <span style="color:#16a34a;">↗</span>
-                              수기수입 (${mi.incomeYymm.substring(0,4)}.${mi.incomeYymm.substring(4,6)})
-                              <c:if test="${not empty mi.memo}"> — ${mi.memo}</c:if>
-                              <span style="color:#94a3b8; font-size:11px;">[수기]</span>
+                              <c:choose>
+                                <c:when test="${not empty mi.title}"><c:out value="${mi.title}"/></c:when>
+                                <c:otherwise>수기수입 (${mi.incomeYymm.substring(0,4)}.${mi.incomeYymm.substring(4,6)})</c:otherwise>
+                              </c:choose>
+                              <c:if test="${not empty mi.memo}"><span style="color:#94a3b8;"> — <c:out value="${mi.memo}"/></span></c:if>
+                              <span style="color:#94a3b8; font-size:11px;">[수기·${mi.incomeYymm.substring(0,4)}.${mi.incomeYymm.substring(4,6)}]</span>
                             </td>
                             <td style="padding:.35rem 1rem; text-align:right; color:#16a34a;">
                               <fmt:formatNumber value="${mi.actualAmt}" pattern="#,##0"/>
@@ -279,9 +303,12 @@
                           <tr style="border-bottom:1px solid #f1f5f9;">
                             <td style="padding:.35rem 1rem .35rem 2.5rem; color:#64748b;">
                               <span style="color:#dc2626;">↘</span>
-                              수기지출 (${me.incomeYymm.substring(0,4)}.${me.incomeYymm.substring(4,6)})
-                              <c:if test="${not empty me.memo}"> — ${me.memo}</c:if>
-                              <span style="color:#94a3b8; font-size:11px;">[수기]</span>
+                              <c:choose>
+                                <c:when test="${not empty me.title}"><c:out value="${me.title}"/></c:when>
+                                <c:otherwise>수기지출 (${me.incomeYymm.substring(0,4)}.${me.incomeYymm.substring(4,6)})</c:otherwise>
+                              </c:choose>
+                              <c:if test="${not empty me.memo}"><span style="color:#94a3b8;"> — <c:out value="${me.memo}"/></span></c:if>
+                              <span style="color:#94a3b8; font-size:11px;">[수기·${me.incomeYymm.substring(0,4)}.${me.incomeYymm.substring(4,6)}]</span>
                             </td>
                             <td></td>
                             <td style="padding:.35rem 1rem; text-align:right; color:#dc2626;">
@@ -427,14 +454,15 @@
         </button>
         <div class="ref-body">
           <table class="st">
-            <thead><tr><th>수지계정</th><th>년월</th><th class="text-end">금액 (원)</th><th>메모</th></tr></thead>
+            <thead><tr><th>수지계정</th><th>제목</th><th>년월</th><th class="text-end">금액 (원)</th><th>메모</th></tr></thead>
             <tbody>
               <c:forEach var="inc" items="${incomeEntries}">
                 <tr>
-                  <td>${inc.ccNm}</td>
+                  <td><c:out value="${inc.ccNm}"/></td>
+                  <td class="fw-semibold"><c:out value="${inc.title}"/></td>
                   <td class="c-gray small">${inc.incomeYymm.substring(0,4)}년 ${inc.incomeYymm.substring(4,6)}월</td>
                   <td class="text-end c-pos"><fmt:formatNumber value="${inc.actualAmt}" pattern="#,##0"/></td>
-                  <td class="c-gray small">${inc.memo}</td>
+                  <td class="c-gray small"><c:out value="${inc.memo}"/></td>
                 </tr>
               </c:forEach>
             </tbody>
@@ -623,6 +651,10 @@ function doSnapshot() {
       if (res.success) {
         btn.textContent = '✅ ' + res.message;
         btn.classList.replace('btn-outline-primary', 'btn-success');
+        // 전표처리 완료 후 페이지 새로고침해서 토글 버튼 표시
+        setTimeout(() => {
+          location.href = location.pathname + '?mode=${mode}&period=${period}&viewMode=snapshot';
+        }, 1000);
       } else {
         alert('전표처리 실패: ' + res.message);
         btn.disabled = false;

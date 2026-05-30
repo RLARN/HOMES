@@ -19,6 +19,22 @@
       background: #e5e7eb; overflow: hidden; margin-top: 3px;
     }
     .bar-inline-fill { height: 100%; border-radius: 3px; }
+
+    /* ── 수지 아코디언 ── */
+    .cc-summary-row { cursor: pointer; transition: background .12s; }
+    .cc-summary-row:hover { background: #f8fafc !important; }
+    .cc-toggle-icon { display: inline-block; width: 14px; font-size: 10px;
+                      color: #94a3b8; transition: transform .18s; }
+    .cc-toggle-icon.open { transform: rotate(90deg); }
+    .cc-detail-row td { background: #fafbfd; font-size: 13px; padding-top: .32rem; padding-bottom: .32rem; }
+    .cc-detail-row .sub-label { padding-left: 2.2rem; color: #374151; }
+    .cc-detail-row .sub-type  { font-size: 11px; padding: 1px 7px; border-radius: 20px;
+                                 font-weight: 500; }
+    .type-income  { background: #dcfce7; color: #15803d; }
+    .type-expense { background: #fee2e2; color: #b91c1c; }
+    .type-saving  { background: #dbeafe; color: #1d4ed8; }
+    .type-invest  { background: #fef9c3; color: #a16207; }
+    .cc-no-detail { color: #9ca3af; font-style: italic; font-size: 12px; }
   </style>
 </head>
 <body class="homes-bg">
@@ -174,21 +190,25 @@
                 <table class="table align-middle homes-table table-status mb-0">
                   <thead class="table-light">
                     <tr>
-                      <th>수지계정</th>
-                      <th>수입원</th>
-                      <th class="text-end">월 수입</th>
-                      <th class="text-end">월 지출</th>
-                      <th class="text-end">기간 총 수입</th>
-                      <th class="text-end">기간 총 지출</th>
-                      <th class="text-end">잔액</th>
-                      <th style="width:120px;">지출 비율</th>
+                      <th style="width:22%">수지계정</th>
+                      <th style="width:16%">수입원</th>
+                      <th class="text-end" style="width:13%">월 수입</th>
+                      <th class="text-end" style="width:13%">월 지출</th>
+                      <th class="text-end" style="width:13%">기간 총 수입</th>
+                      <th class="text-end" style="width:13%">기간 총 지출</th>
+                      <th class="text-end" style="width:10%">잔액</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    <c:forEach var="s" items="${statusList}">
-                      <c:set var="pct" value="${s.totalIncomeAmt > 0 ? s.totalExpenseAmt * 100 / s.totalIncomeAmt : 0}"/>
-                      <tr>
+                  <tbody id="ccTableBody">
+                    <c:forEach var="s" items="${statusList}" varStatus="vs">
+                      <c:set var="hasItems" value="${not empty s.expensePlans or not empty s.incomePlanNm}"/>
+
+                      <%-- ── 수지계정 요약 행 ── --%>
+                      <tr class="cc-summary-row"
+                          onclick="toggleCC(${vs.index})"
+                          data-idx="${vs.index}">
                         <td>
+                          <span class="cc-toggle-icon" id="icon-${vs.index}">▶</span>
                           <span class="fw-semibold">${s.ccNm}</span>
                           <c:if test="${s.ccType == 'AUTO'}">
                             <span class="badge bg-light text-secondary border ms-1" style="font-size:10px;">자동</span>
@@ -218,21 +238,92 @@
                           <c:if test="${s.balance < 0}">-</c:if>
                           <fmt:formatNumber value="${s.balance < 0 ? -s.balance : s.balance}" pattern="#,##0"/>
                         </td>
-                        <td>
-                          <c:if test="${s.totalIncomeAmt > 0}">
-                            <div class="d-flex align-items-center gap-1">
-                              <div class="bar-inline flex-grow-1">
-                                <div class="bar-inline-fill ${pct > 100 ? 'bg-danger' : 'bg-primary'}"
-                                     style="width:${pct > 100 ? 100 : pct}%;"></div>
-                              </div>
-                              <span style="font-size:11px; min-width:32px;" class="text-end ${pct > 100 ? 'text-danger' : 'text-muted'}">${pct}%</span>
-                            </div>
-                          </c:if>
-                          <c:if test="${s.totalIncomeAmt <= 0}">
-                            <span class="text-muted small">-</span>
-                          </c:if>
-                        </td>
                       </tr>
+
+                      <%-- ── 하위 항목 행 (기본 숨김) ── --%>
+                      <c:choose>
+                        <c:when test="${not empty s.incomePlanNm}">
+                          <%-- 수입원 행 --%>
+                          <tr class="cc-detail-row" id="detail-${vs.index}" style="display:none;">
+                            <td class="sub-label">
+                              <span class="sub-type type-income">수입</span>
+                              &nbsp;${s.incomePlanNm}
+                            </td>
+                            <td>-</td>
+                            <td class="text-end text-success">
+                              <fmt:formatNumber value="${s.incomeMonthlyAmt}" pattern="#,##0"/>
+                            </td>
+                            <td class="text-end">-</td>
+                            <td class="text-end text-success">
+                              <fmt:formatNumber value="${s.totalIncomeAmt}" pattern="#,##0"/>
+                            </td>
+                            <td class="text-end">-</td>
+                            <td></td>
+                          </tr>
+                        </c:when>
+                      </c:choose>
+
+                      <c:forEach var="p" items="${s.expensePlans}" varStatus="ps">
+                        <c:set var="flowCls" value="${p.flowType == 'EXPENSE' ? 'type-expense' : p.flowType == 'SAVING' ? 'type-saving' : 'type-invest'}"/>
+                        <c:set var="flowNm"  value="${p.flowType == 'EXPENSE' ? '지출' : p.flowType == 'SAVING' ? '저축' : p.flowType == 'INVEST' ? '투자' : p.flowType}"/>
+                        <tr class="cc-detail-row" id="detail-${vs.index}" style="display:none;">
+                          <td class="sub-label">
+                            <span class="sub-type ${flowCls}">${flowNm}</span>
+                            &nbsp;${p.planNm}
+                          </td>
+                          <td class="text-muted" style="font-size:12px;">${p.planTypeNm}</td>
+                          <td class="text-end">-</td>
+                          <td class="text-end text-danger">
+                            <fmt:formatNumber value="${p.amount}" pattern="#,##0"/>
+                          </td>
+                          <td class="text-end">-</td>
+                          <td class="text-end text-danger">
+                            <fmt:formatNumber value="${p.amount}" pattern="#,##0"/>
+                            <span class="text-muted" style="font-size:10px;">/월</span>
+                          </td>
+                          <td></td>
+                        </tr>
+                      </c:forEach>
+
+                      <%-- 수기 현금흐름 항목 --%>
+                      <c:forEach var="m" items="${s.manualEntries}">
+                        <c:set var="mFlowCls" value="${m.flowType == 'INCOME' ? 'type-income' : m.flowType == 'SAVING' ? 'type-saving' : m.flowType == 'INVEST' ? 'type-invest' : 'type-expense'}"/>
+                        <c:set var="mFlowNm"  value="${m.flowType == 'INCOME' ? '수기수입' : m.flowType == 'SAVING' ? '수기저축' : m.flowType == 'INVEST' ? '수기투자' : '수기지출'}"/>
+                        <tr class="cc-detail-row" id="detail-${vs.index}" style="display:none;">
+                          <td class="sub-label">
+                            <span class="sub-type ${mFlowCls}">${mFlowNm}</span>
+                            &nbsp;<c:choose>
+                              <c:when test="${not empty m.title}"><c:out value="${m.title}"/></c:when>
+                              <c:otherwise>${m.incomeYymm}</c:otherwise>
+                            </c:choose>
+                            <c:if test="${not empty m.memo}"><span class="text-muted"> — <c:out value="${m.memo}"/></span></c:if>
+                          </td>
+                          <td class="text-muted" style="font-size:12px;">수기</td>
+                          <c:choose>
+                            <c:when test="${m.flowType == 'INCOME'}">
+                              <td class="text-end text-success"><fmt:formatNumber value="${m.actualAmt}" pattern="#,##0"/></td>
+                              <td class="text-end">-</td>
+                              <td class="text-end text-success"><fmt:formatNumber value="${m.actualAmt}" pattern="#,##0"/></td>
+                              <td class="text-end">-</td>
+                            </c:when>
+                            <c:otherwise>
+                              <td class="text-end">-</td>
+                              <td class="text-end text-danger"><fmt:formatNumber value="${m.actualAmt}" pattern="#,##0"/></td>
+                              <td class="text-end">-</td>
+                              <td class="text-end text-danger"><fmt:formatNumber value="${m.actualAmt}" pattern="#,##0"/></td>
+                            </c:otherwise>
+                          </c:choose>
+                          <td></td>
+                        </tr>
+                      </c:forEach>
+
+                      <%-- 항목 없는 경우 --%>
+                      <c:if test="${empty s.expensePlans and empty s.incomePlanNm and empty s.manualEntries}">
+                        <tr class="cc-detail-row" id="detail-${vs.index}" style="display:none;">
+                          <td colspan="7" class="cc-no-detail ps-5">연결된 수입/지출 항목이 없습니다.</td>
+                        </tr>
+                      </c:if>
+
                     </c:forEach>
                   </tbody>
                   <tfoot class="table-light fw-bold">
@@ -248,7 +339,6 @@
                         <c:if test="${grandBalance < 0}">-</c:if>
                         <fmt:formatNumber value="${grandBalance < 0 ? -grandBalance : grandBalance}" pattern="#,##0"/>
                       </td>
-                      <td></td>
                     </tr>
                   </tfoot>
                 </table>
@@ -268,6 +358,23 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+/* ── 수지계정 아코디언 토글 ── */
+function toggleCC(idx) {
+  var rows  = document.querySelectorAll('#detail-' + idx);
+  var icon  = document.getElementById('icon-' + idx);
+  var isOpen = icon.classList.contains('open');
+
+  rows.forEach(function (r) {
+    r.style.display = isOpen ? 'none' : '';
+  });
+
+  if (isOpen) {
+    icon.classList.remove('open');
+  } else {
+    icon.classList.add('open');
+  }
+}
+
 /* ── 기간 빠른 선택 ── */
 function setQuick(fromOffset, toOffset) {
   const now  = new Date();

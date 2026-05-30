@@ -14,6 +14,9 @@
 <!-- HOMES 공통 CSS -->
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/homes.css">
 
+<!-- HOMES 화면 전환 오버레이 -->
+<script src="${pageContext.request.contextPath}/js/homes-progress.js"></script>
+
 <!-- PWA -->
 <link rel="manifest" href="${pageContext.request.contextPath}/manifest.json">
 

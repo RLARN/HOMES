@@ -66,4 +66,10 @@ public interface CostCenterService {
      *  - 비용센터에서 INCOME_PLAN_SEQ로 참조 중이면 예외 발생
      */
     void checkIncomePlanDeletable(String familyId, Long incomePlanSeq);
+
+    /**
+     * 수지계정별 지출 항목 전체 조회 (Map: ccSeq → 항목 목록)
+     * costCenterStatus 화면의 하위 항목 표시용
+     */
+    java.util.Map<Long, java.util.List<CashFlowPlanVO>> getExpensePlanMapByCC(String familyId);
 }

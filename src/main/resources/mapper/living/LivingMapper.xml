@@ -259,21 +259,24 @@
         <result property="familyId"     column="FAMILY_ID"/>
         <result property="ccSeq"        column="CC_SEQ"/>
         <result property="ccNm"         column="CC_NM"/>
+        <result property="title"        column="TITLE"/>
         <result property="flowType"     column="FLOW_TYPE"/>
         <result property="incomeYymm"   column="INCOME_YYMM"/>
         <result property="actualAmt"    column="ACTUAL_AMT"/>
         <result property="memo"         column="MEMO"/>
         <result property="regId"        column="REG_ID"/>
         <result property="regDt"        column="REG_DT"/>
+        <result property="regDtStr"     column="REG_DT_STR"/>
         <result property="updId"        column="UPD_ID"/>
         <result property="updDt"        column="UPD_DT"/>
     </resultMap>
 
     <select id="selectIncomeListByRange" resultMap="IncomeMap">
         SELECT i.INCOME_SEQ, i.FAMILY_ID, i.CC_SEQ,
-               cc.CC_NM, i.FLOW_TYPE,
+               cc.CC_NM, i.TITLE, i.FLOW_TYPE,
                i.INCOME_YYMM, i.ACTUAL_AMT, i.MEMO,
-               i.REG_ID, i.REG_DT, i.UPD_ID, i.UPD_DT
+               i.REG_ID, i.REG_DT, DATE_FORMAT(i.REG_DT, '%Y-%m-%d') AS REG_DT_STR,
+               i.UPD_ID, i.UPD_DT
         FROM LIVING_INCOME_MST i
         JOIN COST_CENTER_MST cc ON cc.CC_SEQ = i.CC_SEQ
         WHERE i.FAMILY_ID   = #{familyId}
@@ -283,9 +286,10 @@
 
     <select id="selectIncomeList" resultMap="IncomeMap">
         SELECT i.INCOME_SEQ, i.FAMILY_ID, i.CC_SEQ,
-               cc.CC_NM, i.FLOW_TYPE,
+               cc.CC_NM, i.TITLE, i.FLOW_TYPE,
                i.INCOME_YYMM, i.ACTUAL_AMT, i.MEMO,
-               i.REG_ID, i.REG_DT, i.UPD_ID, i.UPD_DT
+               i.REG_ID, i.REG_DT, DATE_FORMAT(i.REG_DT, '%Y-%m-%d') AS REG_DT_STR,
+               i.UPD_ID, i.UPD_DT
         FROM LIVING_INCOME_MST i
         JOIN COST_CENTER_MST cc ON cc.CC_SEQ = i.CC_SEQ
         WHERE i.FAMILY_ID   = #{familyId}
@@ -296,9 +300,10 @@
 
     <select id="selectManualCashflowList" resultMap="IncomeMap">
         SELECT i.INCOME_SEQ, i.FAMILY_ID, i.CC_SEQ,
-               cc.CC_NM, i.FLOW_TYPE,
+               cc.CC_NM, i.TITLE, i.FLOW_TYPE,
                i.INCOME_YYMM, i.ACTUAL_AMT, i.MEMO,
-               i.REG_ID, i.REG_DT, i.UPD_ID, i.UPD_DT
+               i.REG_ID, i.REG_DT, DATE_FORMAT(i.REG_DT, '%Y-%m-%d') AS REG_DT_STR,
+               i.UPD_ID, i.UPD_DT
         FROM LIVING_INCOME_MST i
         JOIN COST_CENTER_MST cc ON cc.CC_SEQ = i.CC_SEQ
         WHERE i.FAMILY_ID   = #{familyId}
@@ -308,11 +313,12 @@
 
     <insert id="upsertIncome" useGeneratedKeys="true" keyProperty="incomeSeq">
         INSERT INTO LIVING_INCOME_MST
-            (FAMILY_ID, CC_SEQ, FLOW_TYPE, INCOME_YYMM, ACTUAL_AMT, MEMO, REG_ID, REG_DT, UPD_ID, UPD_DT)
+            (FAMILY_ID, CC_SEQ, TITLE, FLOW_TYPE, INCOME_YYMM, ACTUAL_AMT, MEMO, REG_ID, REG_DT, UPD_ID, UPD_DT)
         VALUES
-            (#{familyId}, #{ccSeq}, COALESCE(#{flowType}, 'INCOME'), #{incomeYymm},
+            (#{familyId}, #{ccSeq}, #{title}, COALESCE(#{flowType}, 'INCOME'), #{incomeYymm},
              #{actualAmt}, #{memo}, #{regId}, NOW(), #{updId}, NOW())
         ON DUPLICATE KEY UPDATE
+            TITLE      = VALUES(TITLE),
             ACTUAL_AMT = VALUES(ACTUAL_AMT),
             MEMO       = VALUES(MEMO),
             UPD_ID     = VALUES(UPD_ID),

@@ -117,7 +117,7 @@
                                    style="cursor:pointer;">
                           </div>
                         </td>
-                        <td onclick="location.href='${pageContext.request.contextPath}/asset/income/form?planSeq=${p.planSeq}'" style="cursor:pointer;">
+                        <td onclick="HOMES.go('${pageContext.request.contextPath}/asset/income/form?planSeq=${p.planSeq}')" style="cursor:pointer;">
                           <div class="fw-semibold"><c:out value="${p.planNm}"/></div>
                           <c:if test="${not empty p.memo}">
                             <div class="text-muted small text-truncate" style="max-width:260px;"><c:out value="${p.memo}"/></div>

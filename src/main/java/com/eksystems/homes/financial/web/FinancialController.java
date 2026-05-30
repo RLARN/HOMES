@@ -3,6 +3,7 @@ package com.eksystems.homes.financial.web;
 import com.eksystems.homes.asset.service.AssetService;
 import com.eksystems.homes.asset.service.CashFlowService;
 import com.eksystems.homes.asset.service.CostCenterService;
+import com.eksystems.homes.asset.service.SnapshotService;
 import com.eksystems.homes.asset.vo.AssetSummaryVO;
 import com.eksystems.homes.asset.vo.AssetVO;
 import com.eksystems.homes.asset.vo.CashFlowPlanVO;
@@ -32,15 +33,18 @@ public class FinancialController {
     private final AssetService      assetService;
     private final CashFlowService   cashFlowService;
     private final CostCenterService costCenterService;
+    private final SnapshotService   snapshotService;
     private final LivingService     livingService;
 
     public FinancialController(AssetService assetService,
                                CashFlowService cashFlowService,
                                CostCenterService costCenterService,
+                               SnapshotService snapshotService,
                                LivingService livingService) {
         this.assetService      = assetService;
         this.cashFlowService   = cashFlowService;
         this.costCenterService = costCenterService;
+        this.snapshotService   = snapshotService;
         this.livingService     = livingService;
     }
 
@@ -48,6 +52,7 @@ public class FinancialController {
     public String statement(
             @RequestParam(defaultValue = "monthly") String mode,
             @RequestParam(required = false) String period,
+            @RequestParam(defaultValue = "live") String viewMode,
             Model model, HttpSession session) {
 
         LoginVO login   = (LoginVO) session.getAttribute("LoginVO");
@@ -75,8 +80,26 @@ public class FinancialController {
             dispPeriod = period.substring(0, 4) + "년 " + period.substring(4, 6) + "월";
         }
 
+        // 전표처리 존재 여부 (월간만 해당)
+        boolean hasSnapshot = "monthly".equals(mode) && snapshotService.hasSnapshot(familyId, period);
+        // 전표처리본이 없으면 강제로 live
+        if (!hasSnapshot) viewMode = "live";
+        boolean useSnapshot = hasSnapshot && "snapshot".equals(viewMode);
+
         // ── [핵심] 비용센터별 손익 ────────────────────────────
-        List<CostCenterStatusVO> ccList = costCenterService.getStatusList(familyId, fromYymm, toYymm);
+        List<CostCenterStatusVO> ccList;
+        if (useSnapshot) {
+            ccList = snapshotService.getCostCenterHst(familyId, period);
+            for (CostCenterStatusVO s : ccList) {
+                long inc = s.getIncomeMonthlyAmt()  != null ? s.getIncomeMonthlyAmt()  : 0L;
+                long exp = s.getExpenseMonthlyAmt() != null ? s.getExpenseMonthlyAmt() : 0L;
+                s.setTotalIncomeAmt(inc);
+                s.setTotalExpenseAmt(exp);
+                s.setBalance(inc - exp);
+            }
+        } else {
+            ccList = costCenterService.getStatusList(familyId, fromYymm, toYymm);
+        }
 
         // 수기 현금흐름 (INCOME + EXPENSE) 전체 — CC_SEQ 기준 그룹핑
         List<LivingIncomeMstVO> allManualEntries = livingService.getIncomeListByRange(familyId, fromYymm, toYymm);
@@ -97,20 +120,25 @@ public class FinancialController {
                 ));
 
         // 비용센터 손익 계산 (months 적용, 수기 지출도 반영)
+        // snapshot 모드: totalIncome/Expense 이미 세팅됨, 수기 항목도 합산
         long ccIncomeTotal  = 0L;
         long ccExpenseTotal = 0L;
         for (CostCenterStatusVO cc : ccList) {
-            long planIncome   = (cc.getIncomeMonthlyAmt()  != null ? cc.getIncomeMonthlyAmt()  : 0L) * months;
-            long manualInc    = manualIncomeByCC.getOrDefault(cc.getCcSeq(), 0L);
-            long planExpense  = (cc.getExpenseMonthlyAmt() != null ? cc.getExpenseMonthlyAmt() : 0L) * months;
-            long manualExp    = manualExpenseByCC.getOrDefault(cc.getCcSeq(), 0L);
+            long base_inc = useSnapshot
+                    ? (cc.getTotalIncomeAmt()  != null ? cc.getTotalIncomeAmt()  : 0L)
+                    : (cc.getIncomeMonthlyAmt()  != null ? cc.getIncomeMonthlyAmt()  : 0L) * months;
+            long base_exp = useSnapshot
+                    ? (cc.getTotalExpenseAmt() != null ? cc.getTotalExpenseAmt() : 0L)
+                    : (cc.getExpenseMonthlyAmt() != null ? cc.getExpenseMonthlyAmt() : 0L) * months;
+            long manualInc = manualIncomeByCC.getOrDefault(cc.getCcSeq(), 0L);
+            long manualExp = manualExpenseByCC.getOrDefault(cc.getCcSeq(), 0L);
 
-            cc.setTotalIncomeAmt(planIncome + manualInc);
-            cc.setTotalExpenseAmt(planExpense + manualExp);
-            cc.setBalance(planIncome + manualInc - planExpense - manualExp);
+            cc.setTotalIncomeAmt(base_inc + manualInc);
+            cc.setTotalExpenseAmt(base_exp + manualExp);
+            cc.setBalance(base_inc + manualInc - base_exp - manualExp);
 
-            ccIncomeTotal  += planIncome + manualInc;
-            ccExpenseTotal += planExpense + manualExp;
+            ccIncomeTotal  += base_inc + manualInc;
+            ccExpenseTotal += base_exp + manualExp;
         }
         long ccNetBalance = ccIncomeTotal - ccExpenseTotal;
 
@@ -175,6 +203,9 @@ public class FinancialController {
 
         model.addAttribute("mode",           mode);
         model.addAttribute("period",         period);
+        model.addAttribute("viewMode",       viewMode);
+        model.addAttribute("hasSnapshot",    hasSnapshot);
+        model.addAttribute("useSnapshot",    useSnapshot);
         model.addAttribute("dispPeriod",     dispPeriod);
         model.addAttribute("months",         months);
         // 비용센터 손익 (핵심)

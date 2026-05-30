@@ -28,9 +28,19 @@
     /* ── 실적 보정 배지 ── */
     .ratio-badge { font-size:11px; border-radius:20px; padding:2px 8px; }
     /* ── AI 박스 ── */
-    .ai-result-box { font-size:14px; line-height:1.8; white-space:pre-wrap;
-                     background:#f8fafc; border-radius:12px; padding:20px; min-height:120px; }
-    .ai-result-box h3, .ai-result-box strong { color:#1e293b; }
+    .ai-result-box { font-size:14px; line-height:1.8;
+                     background:#f8fafc; border-radius:12px; padding:20px; }
+    .ai-result-box strong { color:#1e293b; }
+    /* 접힌 상태: 2줄만 표시 */
+    .ai-result-collapsed { max-height:3.8em; overflow:hidden; position:relative; }
+    .ai-result-collapsed::after {
+      content:''; position:absolute; bottom:0; left:0; right:0; height:2em;
+      background:linear-gradient(transparent, #f8fafc);
+    }
+    /* 토글 버튼 */
+    .ai-toggle-btn { font-size:12px; color:#6366f1; cursor:pointer; border:none;
+                     background:none; padding:4px 0; display:block; width:100%; text-align:center; }
+    .ai-toggle-btn:hover { text-decoration:underline; }
   </style>
 </head>
 <body class="homes-bg">
@@ -85,13 +95,14 @@
       <div class="card homes-card mb-4" id="aiCard">
         <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4 pb-0 d-flex align-items-center justify-content-between">
           <span class="fw-semibold">H-Ops AI 분석 리포트</span>
-          <button class="btn btn-outline-secondary btn-sm homes-pill" id="aiRetryBtn" onclick="askAI()" style="display:none;">🔄 재분석</button>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm homes-pill" id="aiRetryBtn" onclick="askAI()" style="display:none;">🔄 재분석</button>
+          </div>
         </div>
         <div class="card-body px-3 px-md-4">
-          <div id="aiLoadingWrap" class="text-center py-3 text-muted">
-            <div class="spinner-border spinner-border-sm me-2"></div>AI가 분석 중입니다...
-          </div>
-          <div id="aiResultWrap" class="ai-result-box" style="display:none;"></div>
+          <div id="aiLoadingWrap"></div>
+          <div id="aiResultWrap" class="ai-result-box ai-result-collapsed" style="display:none;"></div>
+          <button class="ai-toggle-btn" id="aiToggleBtn" style="display:none;" onclick="toggleAiResult()">▼ 전체 보기</button>
         </div>
       </div>
 
@@ -825,7 +836,7 @@
     const result  = document.getElementById('aiResultWrap');
     const retry   = document.getElementById('aiRetryBtn');
 
-    loading.style.display = '';
+    HOMES.aiProgress.show(loading);
     result.style.display  = 'none';
     retry.style.display   = 'none';
 
@@ -840,10 +851,11 @@
     }).finally(() => clearTimeout(tid))
     .then(r => r.json())
     .then(res => {
-      loading.style.display = 'none';
+      HOMES.aiProgress.hide(loading);
       result.style.display  = '';
       retry.style.display   = '';
 
+      const toggle = document.getElementById('aiToggleBtn');
       if (res.success) {
         result.innerHTML = res.text
           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -852,12 +864,17 @@
           .replace(/^# (.+)$/gm,   '<div class="fw-bold mt-3 mb-1 fs-4">$1</div>')
           .replace(/^- (.+)$/gm,   '<div class="ms-3">• $1</div>')
           .replace(/\n/g, '<br>');
+        // 기본 접힌 상태로 시작
+        result.classList.add('ai-result-collapsed');
+        toggle.style.display = '';
+        toggle.textContent   = '▼ 전체 보기';
       } else {
         result.innerHTML = '<span class="text-danger">' + esc(res.text) + '</span>';
+        toggle.style.display = 'none';
       }
     })
     .catch(err => {
-      loading.style.display = 'none';
+      HOMES.aiProgress.hide(loading);
       result.style.display  = '';
       retry.style.display   = '';
       result.innerHTML = '<span class="text-danger">요청 실패: ' + esc(err.message) + '</span>';
@@ -886,8 +903,16 @@
     if (e.target.classList.contains('sc-check') && rawData) renderForecastChart(rawData);
   });
 
-  window.loadData = loadData;
-  window.askAI    = askAI;
+  function toggleAiResult() {
+    const result = document.getElementById('aiResultWrap');
+    const btn    = document.getElementById('aiToggleBtn');
+    const collapsed = result.classList.toggle('ai-result-collapsed');
+    btn.textContent = collapsed ? '▼ 전체 보기' : '▲ 접기';
+  }
+
+  window.loadData       = loadData;
+  window.askAI          = askAI;
+  window.toggleAiResult = toggleAiResult;
 })();
 </script>
 </body>
