@@ -25,7 +25,8 @@
         </div>
         <div class="d-flex gap-2 align-items-center">
           <a class="btn btn-outline-secondary homes-pill px-3"
-             href="${pageContext.request.contextPath}/living/budget">⚙ 기준정보설정</a>
+             href="${pageContext.request.contextPath}/living/budget" class="d-inline-flex align-items-center gap-1">
+            <span class="material-symbols-rounded ms-sm">settings</span>기준정보설정</a>
           <button class="btn btn-primary homes-pill px-3" onclick="openThisMonth()">이번달 입력</button>
         </div>
       </div>

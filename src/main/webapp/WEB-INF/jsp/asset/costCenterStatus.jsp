@@ -35,6 +35,16 @@
     .type-saving  { background: #dbeafe; color: #1d4ed8; }
     .type-invest  { background: #fef9c3; color: #a16207; }
     .cc-no-detail { color: #9ca3af; font-style: italic; font-size: 12px; }
+    .ai-result-box { font-size:14px; line-height:1.8; background:#f8fafc; border-radius:12px; padding:20px; }
+    .ai-result-box strong { color:#1e293b; }
+    .ai-result-collapsed { max-height:3.8em; overflow:hidden; position:relative; }
+    .ai-result-collapsed::after {
+      content:''; position:absolute; bottom:0; left:0; right:0; height:2em;
+      background:linear-gradient(transparent, #f8fafc);
+    }
+    .ai-toggle-btn { font-size:12px; color:#6366f1; cursor:pointer; border:none;
+                     background:none; padding:4px 0; display:block; width:100%; text-align:center; }
+    .ai-toggle-btn:hover { text-decoration:underline; }
   </style>
 </head>
 <body class="homes-bg">
@@ -57,7 +67,7 @@
               &nbsp;|&nbsp;<strong>${dispFrom} ~ ${dispTo}</strong>
             </c:if>
             <c:if test="${hasHst}">
-              &nbsp;<span class="badge bg-primary-subtle text-primary border" style="font-size:11px;">📌 전표처리 기준</span>
+              &nbsp;<span class="badge bg-primary-subtle text-primary border d-inline-flex align-items-center gap-1" style="font-size:11px;"><span class="material-symbols-rounded" style="font-size:12px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20;">push_pin</span>전표처리 기준</span>
             </c:if>
             <c:if test="${not hasHst}">
               &nbsp;<span class="badge bg-warning-subtle text-warning border" style="font-size:11px;">⚡ 실시간</span>
@@ -94,6 +104,18 @@
                       onclick="setQuick(-11,0)">12개월</button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <div class="card homes-card mb-4" id="aiCard">
+        <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4 pb-0 d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">H-Ops AI 분석 리포트</span>
+          <button class="btn btn-outline-secondary btn-sm homes-pill" id="aiRetryBtn" onclick="askStatusAI()" style="display:none;">다시 분석</button>
+        </div>
+        <div class="card-body px-3 px-md-4">
+          <div id="aiLoadingWrap"></div>
+          <div id="aiResultWrap" class="ai-result-box ai-result-collapsed" style="display:none;"></div>
+          <button class="ai-toggle-btn" id="aiToggleBtn" style="display:none;" onclick="toggleAiResult()">전체 보기</button>
         </div>
       </div>
 
@@ -158,8 +180,8 @@
             <!-- 막대 차트 -->
             <div class="col-12 col-lg-8">
               <div class="card homes-card h-100">
-                <div class="card-header bg-transparent fw-semibold">
-                  📊 수지계정별 수입 vs 지출
+                <div class="card-header bg-transparent fw-semibold d-flex align-items-center gap-1">
+                  <span class="material-symbols-rounded ms-sm">bar_chart</span>수지계정별 수입 vs 지출
                 </div>
                 <div class="card-body chart-wrap">
                   <canvas id="barChart"></canvas>
@@ -169,8 +191,8 @@
             <!-- 도넛 차트 -->
             <div class="col-12 col-lg-4">
               <div class="card homes-card h-100">
-                <div class="card-header bg-transparent fw-semibold">
-                  🍩 지출 비중
+                <div class="card-header bg-transparent fw-semibold d-flex align-items-center gap-1">
+                  <span class="material-symbols-rounded ms-sm">donut_large</span>지출 비중
                 </div>
                 <div class="card-body chart-wrap d-flex flex-column align-items-center justify-content-center">
                   <canvas id="donutChart" style="max-height:260px;"></canvas>
@@ -182,8 +204,8 @@
 
           <!-- 수지계정별 상세 테이블 -->
           <div class="card homes-card">
-            <div class="card-header bg-transparent fw-semibold">
-              📋 수지계정별 상세 내역
+            <div class="card-header bg-transparent fw-semibold d-flex align-items-center gap-1">
+              <span class="material-symbols-rounded ms-sm">list_alt</span>수지계정별 상세 내역
             </div>
             <div class="card-body p-0">
               <div class="table-responsive">
@@ -358,6 +380,69 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+const STATUS_AI_CONTEXT = ${aiContextJson};
+
+function renderAiText(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^### (.+)$/gm, '<div class="fw-bold mt-3 mb-1 text-primary fs-6">$1</div>')
+    .replace(/^## (.+)$/gm,  '<div class="fw-bold mt-3 mb-1 fs-5">$1</div>')
+    .replace(/^# (.+)$/gm,   '<div class="fw-bold mt-3 mb-1 fs-4">$1</div>')
+    .replace(/^- (.+)$/gm,   '<div class="ms-3">- $1</div>')
+    .replace(/\n/g, '<br>');
+}
+
+function askStatusAI() {
+  const loading = document.getElementById('aiLoadingWrap');
+  const result  = document.getElementById('aiResultWrap');
+  const retry   = document.getElementById('aiRetryBtn');
+  const toggle  = document.getElementById('aiToggleBtn');
+
+  HOMES.aiProgress.show(loading);
+  result.style.display = 'none';
+  retry.style.display = 'none';
+  toggle.style.display = 'none';
+
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 175000);
+  fetch('${pageContext.request.contextPath}/asset/costcenter/status/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(STATUS_AI_CONTEXT),
+    signal: controller.signal
+  }).finally(() => clearTimeout(tid))
+    .then(r => r.json())
+    .then(res => {
+      HOMES.aiProgress.hide(loading);
+      result.style.display = '';
+      retry.style.display = '';
+      if (res.success) {
+        result.innerHTML = renderAiText(res.text);
+        result.classList.add('ai-result-collapsed');
+        toggle.style.display = '';
+        toggle.textContent = '전체 보기';
+      } else {
+        result.innerHTML = '<span class="text-danger">' + renderAiText(res.text) + '</span>';
+      }
+    })
+    .catch(err => {
+      HOMES.aiProgress.hide(loading);
+      result.style.display = '';
+      retry.style.display = '';
+      result.innerHTML = '<span class="text-danger">요청 실패: ' + renderAiText(err.message) + '</span>';
+    });
+}
+
+function toggleAiResult() {
+  const result = document.getElementById('aiResultWrap');
+  const btn = document.getElementById('aiToggleBtn');
+  const collapsed = result.classList.toggle('ai-result-collapsed');
+  btn.textContent = collapsed ? '전체 보기' : '접기';
+}
+
+askStatusAI();
+
 /* ── 수지계정 아코디언 토글 ── */
 function toggleCC(idx) {
   var rows  = document.querySelectorAll('#detail-' + idx);

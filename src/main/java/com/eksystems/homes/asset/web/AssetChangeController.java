@@ -1,5 +1,6 @@
 package com.eksystems.homes.asset.web;
 
+import com.eksystems.homes.assistant.service.GeminiService;
 import com.eksystems.homes.asset.service.SnapshotService;
 import com.eksystems.homes.asset.vo.AssetChangeSummaryVO;
 import com.eksystems.homes.asset.vo.AssetTypeMonthVO;
@@ -9,10 +10,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import jakarta.servlet.http.HttpSession;
+import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 @Controller
@@ -21,10 +27,12 @@ public class AssetChangeController {
 
     private final SnapshotService snapshotService;
     private final ObjectMapper    objectMapper;
+    private final GeminiService   geminiService;
 
-    public AssetChangeController(SnapshotService snapshotService, ObjectMapper objectMapper) {
+    public AssetChangeController(SnapshotService snapshotService, ObjectMapper objectMapper, GeminiService geminiService) {
         this.snapshotService = snapshotService;
         this.objectMapper    = objectMapper;
+        this.geminiService   = geminiService;
     }
 
     @GetMapping
@@ -111,7 +119,96 @@ public class AssetChangeController {
         model.addAttribute("typeDataJson",   objectMapper.writeValueAsString(typeDataMap));
         model.addAttribute("latestPieJson",  objectMapper.writeValueAsString(latestTypePie));
         model.addAttribute("hasData",        !summaryList.isEmpty());
+        model.addAttribute("aiContextJson",  objectMapper.writeValueAsString(
+                buildAssetChangeAiContext(summaryList, typeDataMap, latestTypePie, momList,
+                        latest, prev, momChange)));
 
         return "asset/assetChange";
+    }
+
+    @PostMapping("/analyze")
+    @ResponseBody
+    public Callable<Map<String, Object>> analyzeAssetChange(@RequestBody Map<String, Object> aiContext) {
+        return () -> {
+            try {
+                String result = geminiService.analyzeFinancialReport(aiContext);
+                return Map.of("success", true, "text", result);
+            } catch (Exception e) {
+                return Map.of("success", false, "text", "분석 중 오류가 발생했습니다: " + e.getMessage());
+            }
+        };
+    }
+
+    private Map<String, Object> buildAssetChangeAiContext(List<AssetChangeSummaryVO> summaryList,
+                                                          Map<String, List<Long>> typeDataMap,
+                                                          Map<String, Long> latestTypePie,
+                                                          List<Long> momList,
+                                                          AssetChangeSummaryVO latest,
+                                                          AssetChangeSummaryVO prev,
+                                                          long momChange) {
+        Map<String, Object> ctx = new LinkedHashMap<>();
+        ctx.put("reportTitle", "자산변동현황 분석 리포트");
+        ctx.put("reportType", "assetChangeStatus");
+        ctx.put("generatedAt", LocalDate.now().toString());
+        ctx.put("dataMonths", summaryList.size());
+
+        if (latest != null) {
+            long totalAsset = latest.getTotalAssetAmt();
+            long loan = latest.getTotalLoanBalance();
+            long net = latest.getNetAssetAmt();
+            double debtRatio = totalAsset > 0 ? Math.round(loan * 1000.0 / totalAsset) / 10.0 : 0.0;
+            double liquidRatio = totalAsset > 0 ? Math.round(latest.getLiquidAssetAmt() * 1000.0 / totalAsset) / 10.0 : 0.0;
+            ctx.put("latest", Map.of(
+                    "hstYymm", latest.getHstYymm(),
+                    "totalAsset", totalAsset,
+                    "totalLoan", loan,
+                    "netAsset", net,
+                    "liquidAsset", latest.getLiquidAssetAmt(),
+                    "fixedAsset", latest.getFixedAssetAmt(),
+                    "monthlyIncome", latest.getMonthlyIncome(),
+                    "monthlyExpense", latest.getMonthlyExpense(),
+                    "debtRatioPct", debtRatio,
+                    "liquidRatioPct", liquidRatio
+            ));
+        }
+
+        if (prev != null) {
+            ctx.put("previous", Map.of(
+                    "hstYymm", prev.getHstYymm(),
+                    "netAsset", prev.getNetAssetAmt(),
+                    "totalAsset", prev.getTotalAssetAmt(),
+                    "totalLoan", prev.getTotalLoanBalance()
+            ));
+        }
+
+        long avgMom = momList.size() > 1
+                ? Math.round(momList.stream().skip(1).mapToLong(Long::longValue).average().orElse(0.0))
+                : 0L;
+        ctx.put("movementSummary", Map.of(
+                "latestMoM", momChange,
+                "averageMoM", avgMom,
+                "positiveMonths", momList.stream().filter(v -> v > 0).count(),
+                "negativeMonths", momList.stream().filter(v -> v < 0).count()
+        ));
+
+        List<Map<String, Object>> monthly = new ArrayList<>();
+        for (int i = 0; i < summaryList.size(); i++) {
+            AssetChangeSummaryVO s = summaryList.get(i);
+            monthly.add(Map.of(
+                    "hstYymm", s.getHstYymm(),
+                    "totalAsset", s.getTotalAssetAmt(),
+                    "totalLoan", s.getTotalLoanBalance(),
+                    "netAsset", s.getNetAssetAmt(),
+                    "liquidAsset", s.getLiquidAssetAmt(),
+                    "fixedAsset", s.getFixedAssetAmt(),
+                    "monthlyIncome", s.getMonthlyIncome(),
+                    "monthlyExpense", s.getMonthlyExpense(),
+                    "momNetAsset", momList.get(i)
+            ));
+        }
+        ctx.put("monthlyTrend", monthly);
+        ctx.put("assetTypeTrend", typeDataMap);
+        ctx.put("latestAssetTypeMix", latestTypePie);
+        return ctx;
     }
 }

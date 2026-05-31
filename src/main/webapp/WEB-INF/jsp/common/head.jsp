@@ -11,6 +11,10 @@
 <link rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@latest/dist/web/static/pretendard.css">
 
+<!-- Material Symbols Rounded -->
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
+
 <!-- HOMES 공통 CSS -->
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/homes.css">
 

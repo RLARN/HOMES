@@ -96,7 +96,8 @@
         <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4 pb-0 d-flex align-items-center justify-content-between">
           <span class="fw-semibold">H-Ops AI 분석 리포트</span>
           <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary btn-sm homes-pill" id="aiRetryBtn" onclick="askAI()" style="display:none;">🔄 재분석</button>
+            <button class="btn btn-outline-secondary btn-sm homes-pill d-flex align-items-center gap-1" id="aiRetryBtn" onclick="askAI()" style="display:none;">
+              <span class="material-symbols-rounded ms-sm">refresh</span>재분석</button>
           </div>
         </div>
         <div class="card-body px-3 px-md-4">
@@ -152,7 +153,8 @@
       <!-- ── 메인 차트: 순자산 예측 ── -->
       <div class="card homes-card mb-3">
         <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4 pb-0 d-flex align-items-center justify-content-between">
-          <div class="fw-semibold">📈 순자산 변동 예측</div>
+          <div class="fw-semibold d-flex align-items-center gap-1">
+            <span class="material-symbols-rounded ms-btn">trending_up</span>순자산 변동 예측</div>
           <span class="badge bg-primary-subtle text-primary border" style="font-size:11px;" id="forecastBadge"></span>
         </div>
         <div class="card-body px-3 px-md-4">
@@ -168,8 +170,8 @@
         <!-- 실적 MoM 이력 + 예측 연결 -->
         <div class="col-12 col-lg-6">
           <div class="card homes-card h-100">
-            <div class="card-header bg-transparent fw-semibold">
-              📊 실적 월변동 이력 &amp; 예측 기준선
+            <div class="card-header bg-transparent fw-semibold d-flex align-items-center gap-1">
+              <span class="material-symbols-rounded ms-sm">bar_chart</span>실적 월변동 이력 &amp; 예측 기준선
             </div>
             <div class="card-body chart-wrap-sm">
               <div id="momChartEmpty" class="text-center text-muted py-4 d-none">전표처리 이력 없음</div>
@@ -180,8 +182,8 @@
         <!-- 저축률 추이 -->
         <div class="col-12 col-lg-6">
           <div class="card homes-card h-100">
-            <div class="card-header bg-transparent fw-semibold">
-              💹 저축률 추이 (전표처리 실적)
+            <div class="card-header bg-transparent fw-semibold d-flex align-items-center gap-1">
+              <span class="material-symbols-rounded ms-sm">show_chart</span>저축률 추이 (전표처리 실적)
             </div>
             <div class="card-body chart-wrap-sm">
               <div id="srChartEmpty" class="text-center text-muted py-4 d-none">전표처리 이력 없음</div>
@@ -195,8 +197,8 @@
         <!-- 수입 vs 지출 계획 분포 -->
         <div class="col-12 col-lg-5">
           <div class="card homes-card h-100">
-            <div class="card-header bg-transparent fw-semibold">
-              🥧 수입 / 지출 구성 (계획 기준)
+            <div class="card-header bg-transparent fw-semibold d-flex align-items-center gap-1">
+              <span class="material-symbols-rounded ms-sm">donut_large</span>수입 / 지출 구성 (계획 기준)
             </div>
             <div class="card-body d-flex flex-column align-items-center chart-wrap-sm">
               <canvas id="flowPieChart" style="max-height:200px;"></canvas>
@@ -207,8 +209,8 @@
         <!-- 자산 증감률 자산별 기여 -->
         <div class="col-12 col-lg-7">
           <div class="card homes-card h-100">
-            <div class="card-header bg-transparent fw-semibold">
-              📐 자산별 예상 기여 (증감률 기반, 기간 합계)
+            <div class="card-header bg-transparent fw-semibold d-flex align-items-center gap-1">
+              <span class="material-symbols-rounded ms-sm">stacked_bar_chart</span>자산별 예상 기여 (증감률 기반, 기간 합계)
             </div>
             <div class="card-body chart-wrap-sm">
               <div id="rateBarEmpty" class="text-center text-muted py-4 d-none">증감률 설정된 자산 없음</div>
@@ -471,7 +473,7 @@
     const box = document.getElementById('insightBox');
     if (!insights || !insights.length) { box.style.display = 'none'; return; }
     box.style.display = '';
-    box.innerHTML = '<div class="fw-semibold small text-muted mb-2">💡 예측 인사이트</div>' +
+    box.innerHTML = '<div class="fw-semibold small text-muted mb-2 d-flex align-items-center gap-1"><span class="material-symbols-rounded ms-sm">lightbulb</span>예측 인사이트</div>' +
       insights.map(txt => '<div class="insight-item">' + esc(txt) + '</div>').join('');
   }
 

@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.sns.mapper.SnsMapper">
+
+    <resultMap id="postRM" type="com.eksystems.homes.sns.vo.SnsPostVO">
+        <id     property="postSeq"  column="POST_SEQ"/>
+        <result property="familyId" column="FAMILY_ID"/>
+        <result property="content"  column="CONTENT"/>
+        <result property="regId"    column="REG_ID"/>
+        <result property="regDt"    column="REG_DT"/>
+        <result property="updDt"    column="UPD_DT"/>
+    </resultMap>
+
+    <resultMap id="imgRM" type="com.eksystems.homes.sns.vo.SnsPostImgVO">
+        <id     property="imgSeq"    column="IMG_SEQ"/>
+        <result property="postSeq"   column="POST_SEQ"/>
+        <result property="familyId"  column="FAMILY_ID"/>
+        <result property="fileNm"    column="FILE_NM"/>
+        <result property="storedNm"  column="STORED_NM"/>
+        <result property="sortOrder" column="SORT_ORDER"/>
+        <result property="regId"     column="REG_ID"/>
+        <result property="regDt"     column="REG_DT"/>
+    </resultMap>
+
+    <resultMap id="commentRM" type="com.eksystems.homes.sns.vo.SnsCommentVO">
+        <id     property="commentSeq" column="COMMENT_SEQ"/>
+        <result property="postSeq"    column="POST_SEQ"/>
+        <result property="familyId"   column="FAMILY_ID"/>
+        <result property="content"    column="CONTENT"/>
+        <result property="regId"      column="REG_ID"/>
+        <result property="regDt"      column="REG_DT"/>
+        <result property="updDt"      column="UPD_DT"/>
+    </resultMap>
+
+    <!-- ── 게시글 ────────────────────────────────── -->
+    <insert id="insertPost" useGeneratedKeys="true" keyProperty="postSeq">
+        INSERT INTO SNS_POST (FAMILY_ID, CONTENT, REG_ID, REG_DT, UPD_DT)
+        VALUES (#{familyId}, #{content}, #{regId}, NOW(), NOW())
+    </insert>
+
+    <update id="updatePost">
+        UPDATE SNS_POST
+        SET CONTENT = #{content}, UPD_DT = NOW()
+        WHERE POST_SEQ = #{postSeq} AND FAMILY_ID = #{familyId}
+    </update>
+
+    <select id="selectPost" resultMap="postRM">
+        SELECT * FROM SNS_POST WHERE FAMILY_ID=#{familyId} AND POST_SEQ=#{postSeq}
+    </select>
+
+    <select id="selectPosts" resultMap="postRM">
+        SELECT * FROM SNS_POST
+        WHERE FAMILY_ID = #{familyId}
+        ORDER BY REG_DT DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPosts" resultType="int">
+        SELECT COUNT(*) FROM SNS_POST WHERE FAMILY_ID=#{familyId}
+    </select>
+
+    <delete id="deletePost">
+        DELETE FROM SNS_POST WHERE FAMILY_ID=#{familyId} AND POST_SEQ=#{postSeq}
+    </delete>
+
+    <!-- ── 이미지 ────────────────────────────────── -->
+    <insert id="insertImg" useGeneratedKeys="true" keyProperty="imgSeq">
+        INSERT INTO SNS_POST_IMG (POST_SEQ, FAMILY_ID, FILE_NM, STORED_NM, SORT_ORDER, REG_ID, REG_DT)
+        VALUES (#{postSeq}, #{familyId}, #{fileNm}, #{storedNm}, #{sortOrder}, #{regId}, NOW())
+    </insert>
+
+    <select id="selectImgsByPost" resultMap="imgRM">
+        SELECT * FROM SNS_POST_IMG WHERE POST_SEQ=#{postSeq} ORDER BY SORT_ORDER
+    </select>
+
+    <select id="selectImgsByPosts" resultMap="imgRM">
+        SELECT * FROM SNS_POST_IMG
+        WHERE FAMILY_ID=#{familyId}
+          AND POST_SEQ IN
+          <foreach item="seq" collection="postSeqs" open="(" separator="," close=")">
+              #{seq}
+          </foreach>
+        ORDER BY POST_SEQ, SORT_ORDER
+    </select>
+
+    <delete id="deleteImgsByPost">
+        DELETE FROM SNS_POST_IMG WHERE POST_SEQ=#{postSeq}
+    </delete>
+
+    <select id="searchPosts" resultMap="postRM">
+        SELECT * FROM SNS_POST
+        WHERE FAMILY_ID = #{familyId}
+          AND CONTENT LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY REG_DT DESC
+        LIMIT 20
+    </select>
+
+    <!-- ── 댓글 ────────────────────────────────────── -->
+    <insert id="insertComment" useGeneratedKeys="true" keyProperty="commentSeq">
+        INSERT INTO SNS_POST_COMMENT (POST_SEQ, FAMILY_ID, CONTENT, REG_ID, REG_DT, UPD_DT)
+        VALUES (#{postSeq}, #{familyId}, #{content}, #{regId}, NOW(), NOW())
+    </insert>
+
+    <select id="selectCommentsByPost" resultMap="commentRM">
+        SELECT * FROM SNS_POST_COMMENT
+        WHERE POST_SEQ = #{postSeq} AND FAMILY_ID = #{familyId}
+        ORDER BY REG_DT ASC
+    </select>
+
+    <select id="selectComment" resultMap="commentRM">
+        SELECT * FROM SNS_POST_COMMENT
+        WHERE COMMENT_SEQ = #{commentSeq} AND FAMILY_ID = #{familyId}
+    </select>
+
+    <delete id="deleteComment">
+        DELETE FROM SNS_POST_COMMENT
+        WHERE COMMENT_SEQ = #{commentSeq} AND FAMILY_ID = #{familyId}
+    </delete>
+
+    <select id="countCommentsByPost" resultType="int">
+        SELECT COUNT(*) FROM SNS_POST_COMMENT WHERE POST_SEQ = #{postSeq}
+    </select>
+
+    <!-- ── 좋아요 ───────────────────────────────────── -->
+    <insert id="insertLike">
+        INSERT IGNORE INTO SNS_POST_LIKE (POST_SEQ, FAMILY_ID, REG_ID, REG_DT)
+        VALUES (#{postSeq}, #{familyId}, #{regId}, NOW())
+    </insert>
+
+    <delete id="deleteLike">
+        DELETE FROM SNS_POST_LIKE
+        WHERE POST_SEQ = #{postSeq} AND FAMILY_ID = #{familyId} AND REG_ID = #{regId}
+    </delete>
+
+    <select id="countLikes" resultType="int">
+        SELECT COUNT(*) FROM SNS_POST_LIKE WHERE POST_SEQ = #{postSeq}
+    </select>
+
+    <select id="isLiked" resultType="int">
+        SELECT COUNT(*) FROM SNS_POST_LIKE
+        WHERE POST_SEQ = #{postSeq} AND FAMILY_ID = #{familyId} AND REG_ID = #{regId}
+    </select>
+
+    <select id="countLikesByPosts" resultType="int">
+        SELECT COUNT(*) FROM SNS_POST_LIKE
+        WHERE FAMILY_ID = #{familyId}
+          AND POST_SEQ IN
+          <foreach item="seq" collection="postSeqs" open="(" separator="," close=")">#{seq}</foreach>
+    </select>
+
+    <select id="isLikedByPosts" resultType="int">
+        SELECT COUNT(*) FROM SNS_POST_LIKE
+        WHERE FAMILY_ID = #{familyId} AND REG_ID = #{regId}
+          AND POST_SEQ IN
+          <foreach item="seq" collection="postSeqs" open="(" separator="," close=")">#{seq}</foreach>
+    </select>
+
+</mapper>

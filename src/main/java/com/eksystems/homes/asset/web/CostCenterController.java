@@ -1,5 +1,6 @@
 package com.eksystems.homes.asset.web;
 
+import com.eksystems.homes.assistant.service.GeminiService;
 import com.eksystems.homes.asset.service.CashFlowService;
 import com.eksystems.homes.asset.service.CostCenterService;
 import com.eksystems.homes.asset.service.SnapshotService;
@@ -8,6 +9,8 @@ import com.eksystems.homes.asset.vo.CostCenterVO;
 import com.eksystems.homes.living.service.LivingService;
 import com.eksystems.homes.living.vo.LivingIncomeMstVO;
 import com.eksystems.homes.login.vo.LoginVO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +19,7 @@ import jakarta.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 @Controller
@@ -26,15 +30,21 @@ public class CostCenterController {
     private final CashFlowService   cashFlowService;
     private final SnapshotService   snapshotService;
     private final LivingService     livingService;
+    private final GeminiService     geminiService;
+    private final ObjectMapper      objectMapper;
 
     public CostCenterController(CostCenterService costCenterService,
                                 CashFlowService cashFlowService,
                                 SnapshotService snapshotService,
-                                LivingService livingService) {
+                                LivingService livingService,
+                                GeminiService geminiService,
+                                ObjectMapper objectMapper) {
         this.costCenterService = costCenterService;
         this.cashFlowService   = cashFlowService;
         this.snapshotService   = snapshotService;
         this.livingService     = livingService;
+        this.geminiService     = geminiService;
+        this.objectMapper      = objectMapper;
     }
 
     // ── 목록 ──────────────────────────────────────────────
@@ -93,7 +103,7 @@ public class CostCenterController {
     @GetMapping("/status")
     public String status(@RequestParam(required = false) String fromYymm,
                          @RequestParam(required = false) String toYymm,
-                         Model model, HttpSession session) {
+                         Model model, HttpSession session) throws JsonProcessingException {
         String familyId = login(session).getFamilyId();
 
         String thisMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
@@ -176,7 +186,95 @@ public class CostCenterController {
         model.addAttribute("dispFrom",     dispFrom);
         model.addAttribute("dispTo",       dispTo);
         model.addAttribute("hasHst",       hasHst);
+        model.addAttribute("aiContextJson", objectMapper.writeValueAsString(
+                buildStatusAiContext(fromYymm, toYymm, dispFrom, dispTo, hasHst,
+                        statusList, grandIncome, grandExpense)));
         return "asset/costCenterStatus";
+    }
+
+    @PostMapping("/status/analyze")
+    @ResponseBody
+    public Callable<Map<String, Object>> analyzeStatus(@RequestBody Map<String, Object> aiContext) {
+        return () -> {
+            try {
+                String result = geminiService.analyzeFinancialReport(aiContext);
+                return Map.of("success", true, "text", result);
+            } catch (Exception e) {
+                return Map.of("success", false, "text", "분석 중 오류가 발생했습니다: " + e.getMessage());
+            }
+        };
+    }
+
+    private Map<String, Object> buildStatusAiContext(String fromYymm,
+                                                     String toYymm,
+                                                     String dispFrom,
+                                                     String dispTo,
+                                                     boolean hasHst,
+                                                     List<CostCenterStatusVO> statusList,
+                                                     long grandIncome,
+                                                     long grandExpense) {
+        Map<String, Object> ctx = new LinkedHashMap<>();
+        ctx.put("reportTitle", "수지계정현황 분석 리포트");
+        ctx.put("reportType", "costCenterStatus");
+        ctx.put("generatedAt", LocalDate.now().toString());
+        ctx.put("period", Map.of(
+                "fromYymm", fromYymm,
+                "toYymm", toYymm,
+                "display", dispFrom + " ~ " + dispTo,
+                "snapshotBased", hasHst
+        ));
+
+        long grandBalance = grandIncome - grandExpense;
+        double expenseRate = grandIncome > 0 ? Math.round(grandExpense * 1000.0 / grandIncome) / 10.0 : 0.0;
+        ctx.put("summary", Map.of(
+                "totalIncome", grandIncome,
+                "totalExpense", grandExpense,
+                "balance", grandBalance,
+                "expenseRatePct", expenseRate,
+                "costCenterCount", statusList.size()
+        ));
+
+        List<Map<String, Object>> centers = statusList.stream()
+                .map(s -> {
+                    long income = s.getTotalIncomeAmt() != null ? s.getTotalIncomeAmt() : 0L;
+                    long expense = s.getTotalExpenseAmt() != null ? s.getTotalExpenseAmt() : 0L;
+                    long balance = s.getBalance() != null ? s.getBalance() : income - expense;
+
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("ccSeq", s.getCcSeq());
+                    row.put("name", s.getCcNm());
+                    row.put("type", s.getCcType());
+                    row.put("incomePlanName", s.getIncomePlanNm());
+                    row.put("income", income);
+                    row.put("expense", expense);
+                    row.put("balance", balance);
+                    row.put("expenseSharePct", grandExpense > 0
+                            ? Math.round(expense * 1000.0 / grandExpense) / 10.0 : 0.0);
+                    row.put("regularExpenseItems", s.getExpensePlans() == null ? List.of()
+                            : s.getExpensePlans().stream().limit(8).map(p -> Map.of(
+                                    "name", p.getPlanNm() == null ? "" : p.getPlanNm(),
+                                    "flowType", p.getFlowType() == null ? "" : p.getFlowType(),
+                                    "amount", p.getAmount() == null ? 0L : p.getAmount()
+                            )).toList());
+                    row.put("manualEntries", s.getManualEntries() == null ? List.of()
+                            : s.getManualEntries().stream().limit(8).map(m -> Map.of(
+                                    "title", m.getTitle() == null ? "" : m.getTitle(),
+                                    "flowType", m.getFlowType() == null ? "" : m.getFlowType(),
+                                    "amount", m.getActualAmt() == null ? 0L : m.getActualAmt(),
+                                    "yymm", m.getIncomeYymm() == null ? "" : m.getIncomeYymm()
+                            )).toList());
+                    return row;
+                })
+                .toList();
+        ctx.put("costCenters", centers);
+        ctx.put("topExpenseCenters", centers.stream()
+                .sorted((a, b) -> Long.compare(((Number) b.get("expense")).longValue(), ((Number) a.get("expense")).longValue()))
+                .limit(5)
+                .toList());
+        ctx.put("negativeBalanceCenters", centers.stream()
+                .filter(v -> ((Number) v.get("balance")).longValue() < 0)
+                .toList());
+        return ctx;
     }
 
     // ── 멀티 월 집계: 월별로 스냅샷 우선, 없으면 실시간 계획(×1) ──

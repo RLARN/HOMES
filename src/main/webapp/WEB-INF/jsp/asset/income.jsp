@@ -29,7 +29,7 @@
       <!-- 삭제 실패 에러 -->
       <c:if test="${not empty param.error}">
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-          <strong>⚠ 삭제 불가:</strong> ${param.error}
+          <span class="material-symbols-rounded ms-sm">warning</span><strong>삭제 불가:</strong> ${param.error}
           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
       </c:if>

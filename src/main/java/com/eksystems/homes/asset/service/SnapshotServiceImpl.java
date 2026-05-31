@@ -4,6 +4,7 @@ import com.eksystems.homes.asset.mapper.SnapshotMapper;
 import com.eksystems.homes.asset.vo.AssetChangeSummaryVO;
 import com.eksystems.homes.asset.vo.AssetTypeMonthVO;
 import com.eksystems.homes.asset.vo.CostCenterStatusVO;
+import com.eksystems.homes.living.vo.ManualCashflowVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,12 +27,14 @@ public class SnapshotServiceImpl implements SnapshotService {
         snapshotMapper.deleteAssetHst(familyId, yymm);
         snapshotMapper.deleteLoanHst(familyId, yymm);
         snapshotMapper.deleteCashflowHst(familyId, yymm);
+        snapshotMapper.deleteManualCfHst(familyId, yymm);
 
         // 현재 상태 스냅샷
         snapshotMapper.insertCostCenterHst(familyId, yymm);
         snapshotMapper.insertAssetHst(familyId, yymm);
         snapshotMapper.insertLoanHst(familyId, yymm);
         snapshotMapper.insertCashflowHst(familyId, yymm);
+        snapshotMapper.insertManualCfHst(familyId, yymm);
     }
 
     @Override
@@ -42,6 +45,11 @@ public class SnapshotServiceImpl implements SnapshotService {
     @Override
     public List<CostCenterStatusVO> getCostCenterHst(String familyId, String yymm) {
         return snapshotMapper.selectCostCenterHst(familyId, yymm);
+    }
+
+    @Override
+    public List<ManualCashflowVO> getManualCfHst(String familyId, String yymm) {
+        return snapshotMapper.selectManualCfHst(familyId, yymm);
     }
 
     @Override

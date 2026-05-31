@@ -21,6 +21,10 @@
         DELETE FROM CASHFLOW_PLAN_HST WHERE FAMILY_ID = #{familyId} AND HST_YYMM = #{yymm}
     </delete>
 
+    <delete id="deleteManualCfHst">
+        DELETE FROM MANUAL_CASHFLOW_HST WHERE FAMILY_ID = #{familyId} AND HST_YYMM = #{yymm}
+    </delete>
+
     <!-- ── INSERT: 현재 상태 스냅샷 ── -->
 
     <!-- 비용센터: COST_CENTER_SEQ 직접 연결 + SOURCE_PLAN_SEQ 역방향 모두 포함 -->
@@ -108,7 +112,49 @@
           AND p.DEL_YN    = 'N'
     </insert>
 
+    <!-- 수기 현금흐름 스냅샷: 해당 월(FLOW_YYMM = yymm) 데이터 전체를 HST에 저장 -->
+    <insert id="insertManualCfHst">
+        INSERT INTO MANUAL_CASHFLOW_HST
+            (FAMILY_ID, HST_YYMM, CF_SEQ, CC_SEQ, CC_NM, FLOW_TYPE, FLOW_YYMM, TITLE, ACTUAL_AMT, MEMO, REG_DT)
+        SELECT
+            c.FAMILY_ID,
+            #{yymm},
+            c.CF_SEQ,
+            c.CC_SEQ,
+            cc.CC_NM,
+            c.FLOW_TYPE,
+            c.FLOW_YYMM,
+            c.TITLE,
+            c.ACTUAL_AMT,
+            c.MEMO,
+            NOW()
+        FROM MANUAL_CASHFLOW_MST c
+        JOIN COST_CENTER_MST cc ON cc.CC_SEQ = c.CC_SEQ
+        WHERE c.FAMILY_ID  = #{familyId}
+          AND c.FLOW_YYMM  = #{yymm}
+    </insert>
+
     <!-- ── 조회 ── -->
+
+    <resultMap id="ManualCfHstMap" type="com.eksystems.homes.living.vo.ManualCashflowVO">
+        <id  property="cfSeq"      column="CF_SEQ"/>
+        <result property="familyId"    column="FAMILY_ID"/>
+        <result property="ccSeq"       column="CC_SEQ"/>
+        <result property="ccNm"        column="CC_NM"/>
+        <result property="flowType"    column="FLOW_TYPE"/>
+        <result property="flowYymm"    column="FLOW_YYMM"/>
+        <result property="title"       column="TITLE"/>
+        <result property="actualAmt"   column="ACTUAL_AMT"/>
+        <result property="memo"        column="MEMO"/>
+    </resultMap>
+
+    <select id="selectManualCfHst" resultMap="ManualCfHstMap">
+        SELECT CF_SEQ, FAMILY_ID, CC_SEQ, CC_NM, FLOW_TYPE, FLOW_YYMM, TITLE, ACTUAL_AMT, MEMO
+        FROM MANUAL_CASHFLOW_HST
+        WHERE FAMILY_ID = #{familyId}
+          AND HST_YYMM  = #{yymm}
+        ORDER BY FLOW_TYPE DESC, CC_SEQ, CF_SEQ
+    </select>
 
     <select id="countHst" resultType="int">
         SELECT COUNT(*) FROM COST_CENTER_HST

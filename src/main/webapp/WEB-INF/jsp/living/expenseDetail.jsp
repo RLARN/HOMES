@@ -88,7 +88,8 @@
         <div class="d-flex gap-2 flex-wrap">
           <a class="btn btn-outline-secondary homes-pill px-3"
              href="${pageContext.request.contextPath}/living/expense">← 목록</a>
-          <button class="btn btn-success homes-pill px-3" onclick="saveAll()">💾 전체 저장</button>
+          <button class="btn btn-success homes-pill px-3 d-flex align-items-center gap-1" onclick="saveAll()">
+            <span class="material-symbols-rounded ms-sm">save</span>전체 저장</button>
         </div>
       </div>
 
@@ -178,7 +179,7 @@
                 <c:if test="${prevCatSeq != dtl.catSeq}">
                   <tr class="living-cat-row">
                     <td colspan="5">
-                      <span class="me-1">📂</span><strong>${dtl.catNm}</strong>
+                      <span class="material-symbols-rounded ms-sm me-1" style="color:#f59e0b;">folder</span><strong>${dtl.catNm}</strong>
                     </td>
                   </tr>
                   <c:set var="prevCatSeq" value="${dtl.catSeq}"/>
@@ -379,11 +380,11 @@ function autoSave(el) {
   }).then(r => r.json()).then(res => {
     if (res.success) {
       el.classList.add('saved');
-      showStatus('✅ 저장됨');
+      showStatus('저장됨');
     } else {
-      showStatus('❌ 저장 실패: ' + (res.message || ''));
+      showStatus('저장 실패: ' + (res.message || ''));
     }
-  }).catch(() => showStatus('❌ 저장 실패 (네트워크 오류)'));
+  }).catch(() => showStatus('저장 실패 (네트워크 오류)'));
 }
 
 /* ── 전체 저장 ── */
@@ -403,11 +404,11 @@ function saveAll() {
   }).then(r => r.json()).then(res => {
     if (res.success) {
       document.querySelectorAll('.actual-input').forEach(inp => inp.classList.add('saved'));
-      showStatus('✅ 전체 저장 완료!');
+      showStatus('전체 저장 완료!');
     } else {
-      showStatus('❌ 저장 실패: ' + (res.message || ''));
+      showStatus('저장 실패: ' + (res.message || ''));
     }
-  }).catch(() => showStatus('❌ 저장 실패 (네트워크 오류)'));
+  }).catch(() => showStatus('저장 실패 (네트워크 오류)'));
 }
 
 /* 상태 메시지 */

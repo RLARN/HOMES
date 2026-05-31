@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eksystems.homes.dms.mapper.DmsMapper">
+
+    <!-- ━━━━━━━━━━━━━━━━ ResultMaps ━━━━━━━━━━━━━━━━ -->
+    <resultMap id="folderRM" type="com.eksystems.homes.dms.vo.DmsFolderVO">
+        <id     property="folderSeq" column="FOLDER_SEQ"/>
+        <result property="familyId"  column="FAMILY_ID"/>
+        <result property="folderNm"  column="FOLDER_NM"/>
+        <result property="parentSeq" column="PARENT_SEQ"/>
+        <result property="sortOrder" column="SORT_ORDER"/>
+        <result property="regId"     column="REG_ID"/>
+        <result property="regDt"     column="REG_DT"/>
+        <result property="updId"     column="UPD_ID"/>
+        <result property="updDt"     column="UPD_DT"/>
+    </resultMap>
+
+    <resultMap id="fileRM" type="com.eksystems.homes.dms.vo.DmsFileVO">
+        <id     property="fileSeq"   column="FILE_SEQ"/>
+        <result property="familyId"  column="FAMILY_ID"/>
+        <result property="folderSeq" column="FOLDER_SEQ"/>
+        <result property="fileNm"    column="FILE_NM"/>
+        <result property="storedNm"  column="STORED_NM"/>
+        <result property="fileSize"  column="FILE_SIZE"/>
+        <result property="mimeType"  column="MIME_TYPE"/>
+        <result property="regId"     column="REG_ID"/>
+        <result property="regDt"     column="REG_DT"/>
+        <result property="updId"     column="UPD_ID"/>
+        <result property="updDt"     column="UPD_DT"/>
+    </resultMap>
+
+    <!-- ━━━━━━━━━━━━━━━━ 폴더 ━━━━━━━━━━━━━━━━ -->
+    <insert id="insertFolder" parameterType="com.eksystems.homes.dms.vo.DmsFolderVO"
+            useGeneratedKeys="true" keyProperty="folderSeq">
+        INSERT INTO DMS_FOLDER (FAMILY_ID, FOLDER_NM, PARENT_SEQ, SORT_ORDER, REG_ID, REG_DT, UPD_ID, UPD_DT)
+        VALUES (#{familyId}, #{folderNm}, #{parentSeq}, #{sortOrder}, #{regId}, NOW(), #{updId}, NOW())
+    </insert>
+
+    <select id="selectFolder" resultMap="folderRM">
+        SELECT * FROM DMS_FOLDER
+        WHERE FAMILY_ID = #{familyId} AND FOLDER_SEQ = #{folderSeq}
+    </select>
+
+    <select id="selectFoldersByParent" resultMap="folderRM">
+        SELECT * FROM DMS_FOLDER
+        WHERE FAMILY_ID = #{familyId}
+          AND <choose>
+                <when test="parentSeq == null">PARENT_SEQ IS NULL</when>
+                <otherwise>PARENT_SEQ = #{parentSeq}</otherwise>
+              </choose>
+        ORDER BY SORT_ORDER, FOLDER_NM
+    </select>
+
+    <select id="selectAllFolders" resultMap="folderRM">
+        SELECT * FROM DMS_FOLDER
+        WHERE FAMILY_ID = #{familyId}
+        ORDER BY PARENT_SEQ, SORT_ORDER, FOLDER_NM
+    </select>
+
+    <update id="updateFolderName" parameterType="com.eksystems.homes.dms.vo.DmsFolderVO">
+        UPDATE DMS_FOLDER
+        SET FOLDER_NM = #{folderNm}, UPD_ID = #{updId}, UPD_DT = NOW()
+        WHERE FAMILY_ID = #{familyId} AND FOLDER_SEQ = #{folderSeq}
+    </update>
+
+    <delete id="deleteFolder">
+        DELETE FROM DMS_FOLDER
+        WHERE FAMILY_ID = #{familyId} AND FOLDER_SEQ = #{folderSeq}
+    </delete>
+
+    <!-- 재귀 CTE로 하위 폴더 전체 seq 조회 -->
+    <select id="selectDescendantFolderSeqs" resultType="long">
+        WITH RECURSIVE sub AS (
+            SELECT FOLDER_SEQ FROM DMS_FOLDER
+            WHERE FAMILY_ID = #{familyId} AND FOLDER_SEQ = #{folderSeq}
+            UNION ALL
+            SELECT f.FOLDER_SEQ FROM DMS_FOLDER f
+            INNER JOIN sub s ON f.PARENT_SEQ = s.FOLDER_SEQ AND f.FAMILY_ID = #{familyId}
+        )
+        SELECT FOLDER_SEQ FROM sub
+    </select>
+
+    <!-- ━━━━━━━━━━━━━━━━ 파일 ━━━━━━━━━━━━━━━━ -->
+    <insert id="insertFile" parameterType="com.eksystems.homes.dms.vo.DmsFileVO"
+            useGeneratedKeys="true" keyProperty="fileSeq">
+        INSERT INTO DMS_FILE (FAMILY_ID, FOLDER_SEQ, FILE_NM, STORED_NM, FILE_SIZE, MIME_TYPE,
+                              REG_ID, REG_DT, UPD_ID, UPD_DT)
+        VALUES (#{familyId}, #{folderSeq}, #{fileNm}, #{storedNm}, #{fileSize}, #{mimeType},
+                #{regId}, NOW(), #{updId}, NOW())
+    </insert>
+
+    <update id="updateFileName">
+        UPDATE DMS_FILE
+        SET FILE_NM = #{fileNm}, UPD_ID = #{updId}, UPD_DT = NOW()
+        WHERE FAMILY_ID = #{familyId} AND FILE_SEQ = #{fileSeq}
+    </update>
+
+    <select id="selectFile" resultMap="fileRM">
+        SELECT * FROM DMS_FILE
+        WHERE FAMILY_ID = #{familyId} AND FILE_SEQ = #{fileSeq}
+    </select>
+
+    <select id="selectFilesByFolder" resultMap="fileRM">
+        SELECT * FROM DMS_FILE
+        WHERE FAMILY_ID = #{familyId}
+          AND <choose>
+                <when test="folderSeq == null">FOLDER_SEQ IS NULL</when>
+                <otherwise>FOLDER_SEQ = #{folderSeq}</otherwise>
+              </choose>
+        ORDER BY FILE_NM
+    </select>
+
+    <select id="selectFilesByFolderSeqs" resultMap="fileRM">
+        SELECT * FROM DMS_FILE
+        WHERE FAMILY_ID = #{familyId}
+          AND FOLDER_SEQ IN
+          <foreach item="seq" collection="folderSeqs" open="(" separator="," close=")">
+              #{seq}
+          </foreach>
+    </select>
+
+    <delete id="deleteFile">
+        DELETE FROM DMS_FILE
+        WHERE FAMILY_ID = #{familyId} AND FILE_SEQ = #{fileSeq}
+    </delete>
+
+    <delete id="deleteFilesByFolderSeqs">
+        DELETE FROM DMS_FILE
+        WHERE FAMILY_ID = #{familyId}
+          AND FOLDER_SEQ IN
+          <foreach item="seq" collection="folderSeqs" open="(" separator="," close=")">
+              #{seq}
+          </foreach>
+    </delete>
+
+    <!-- ━━━━━━━━━━━━━━━━ 쿼터 ━━━━━━━━━━━━━━━━ -->
+    <select id="selectTotalUsedBytes" resultType="long">
+        SELECT COALESCE(SUM(FILE_SIZE), 0) FROM DMS_FILE WHERE FAMILY_ID = #{familyId}
+    </select>
+
+    <!-- ━━━━━━━━━━━━━━━━ 검색 ━━━━━━━━━━━━━━━━ -->
+    <select id="searchFiles" resultMap="fileRM">
+        SELECT * FROM DMS_FILE
+        WHERE FAMILY_ID = #{familyId}
+          AND FILE_NM LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY UPD_DT DESC
+        LIMIT 20
+    </select>
+
+    <select id="searchFolders" resultMap="folderRM">
+        SELECT * FROM DMS_FOLDER
+        WHERE FAMILY_ID = #{familyId}
+          AND FOLDER_NM LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY UPD_DT DESC
+        LIMIT 20
+    </select>
+
+</mapper>

@@ -110,8 +110,8 @@
                         <tr class="table-secondary">
                           <td colspan="6" class="fw-semibold" style="font-size:13px;">
                             <c:choose>
-                              <c:when test="${cf.flowType == 'INCOME'}">💰 수입</c:when>
-                              <c:otherwise>💸 지출</c:otherwise>
+                              <c:when test="${cf.flowType == 'INCOME'}"><span class="material-symbols-rounded ms-sm" style="color:#16a34a;">add_circle</span> 수입</c:when>
+                              <c:otherwise><span class="material-symbols-rounded ms-sm" style="color:#dc2626;">remove_circle</span> 지출</c:otherwise>
                             </c:choose>
                           </td>
                         </tr>
@@ -144,10 +144,10 @@
                         <td class="text-center text-nowrap">
                           <button class="btn btn-sm btn-link p-0 text-muted me-1"
                                   onclick="openModal(${cf.cfSeq}, ${cf.ccSeq}, '${cf.flowType}', ${cf.actualAmt}, '<c:out value="${cf.title}"/>', '<c:out value="${cf.memo}"/>')"
-                                  title="수정">✏️</button>
+                                  title="수정"><span class="material-symbols-rounded ms-sm">edit</span></button>
                           <button class="btn btn-sm btn-link p-0 text-danger"
                                   onclick="deleteCf(${cf.cfSeq})"
-                                  title="삭제">🗑</button>
+                                  title="삭제"><span class="material-symbols-rounded ms-sm">delete</span></button>
                         </td>
                       </tr>
                     </c:forEach>
@@ -203,12 +203,14 @@
             <div class="form-check">
               <input class="form-check-input" type="radio" name="cfFlowType" id="ftIncome"
                      value="INCOME" checked onchange="onFlowTypeChange()">
-              <label class="form-check-label text-success fw-semibold" for="ftIncome">💰 수입</label>
+              <label class="form-check-label text-success fw-semibold d-flex align-items-center gap-1" for="ftIncome">
+                <span class="material-symbols-rounded ms-sm">add_circle</span>수입</label>
             </div>
             <div class="form-check">
               <input class="form-check-input" type="radio" name="cfFlowType" id="ftExpense"
                      value="EXPENSE" onchange="onFlowTypeChange()">
-              <label class="form-check-label text-danger fw-semibold" for="ftExpense">💸 지출</label>
+              <label class="form-check-label text-danger fw-semibold d-flex align-items-center gap-1" for="ftExpense">
+                <span class="material-symbols-rounded ms-sm">remove_circle</span>지출</label>
             </div>
           </div>
         </div>

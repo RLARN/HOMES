@@ -357,22 +357,34 @@
       const decoder = new TextDecoder('utf-8');
       let buffer = '';
 
-      while (true) {
-        const read = await reader.read();
-        if (read.done) break;
-        buffer += decoder.decode(read.value, { stream: true });
-        const events = buffer.split('\n\n');
-        buffer = events.pop();
-        events.forEach(chunk => {
-          chunk.split('\n').forEach(line => {
-            if (!line.startsWith('data:')) return;
-            try {
-              handleSseEvent(JSON.parse(line.slice(5).trim()), process);
-            } catch (e) {
-              process.addStep('응답 해석 실패: ' + e.message, 'error');
-            }
-          });
+      /* SSE 라인 단위 파싱 — \n\n 기준 대신 \n 기준으로 처리해서
+         연속 이벤트가 한 청크로 오거나, 스트림 종료 직전 \n\n이 없어도 안전하게 처리 */
+      function flushBuffer(text) {
+        text.split('\n').forEach(line => {
+          if (!line.startsWith('data:')) return;
+          const payload = line.slice(5).trim();
+          if (!payload) return;
+          try {
+            handleSseEvent(JSON.parse(payload), process);
+          } catch (e) {
+            process.addStep('응답 해석 실패: ' + e.message, 'error');
+          }
         });
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          /* 스트림 종료 시 남은 버퍼 반드시 처리 (마지막 이벤트 유실 방지) */
+          if (buffer.trim()) flushBuffer(buffer);
+          break;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        /* 완전한 줄만 처리하고, 마지막 불완전 줄은 다음 청크를 위해 보존 */
+        const nlIdx = buffer.lastIndexOf('\n');
+        if (nlIdx === -1) continue;
+        flushBuffer(buffer.slice(0, nlIdx));
+        buffer = buffer.slice(nlIdx + 1);
       }
     } catch (e) {
       process.remove();

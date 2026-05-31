@@ -104,14 +104,14 @@
                       <tr class="table-secondary cat-row" data-cat-seq="${cat.catSeq}">
                         <td colspan="2">
                           <span class="fw-semibold" style="font-size:14px;">
-                            <span class="me-1">📂</span>${cat.catNm}
+                            <span class="material-symbols-rounded ms-sm me-1" style="color:#f59e0b;">folder</span>${cat.catNm}
                           </span>
                           <button class="btn btn-sm btn-link py-0 px-1 text-muted"
                                   onclick="openCatModal(${cat.catSeq}, '${cat.catNm}', ${cat.sortOrder})"
-                                  title="카테고리 수정">✏️</button>
+                                  title="카테고리 수정"><span class="material-symbols-rounded ms-sm">edit</span></button>
                           <button class="btn btn-sm btn-link py-0 px-1 text-danger"
                                   onclick="deleteCat(${cat.catSeq})"
-                                  title="카테고리 삭제">🗑</button>
+                                  title="카테고리 삭제"><span class="material-symbols-rounded ms-sm">delete</span></button>
                         </td>
                         <td class="text-end fw-semibold text-primary">
                           <fmt:formatNumber value="${cat.totalBudgetAmt}" pattern="#,##0"/> 원
@@ -151,10 +151,10 @@
                               <td class="text-center">
                                 <button class="btn btn-sm btn-link p-0 text-muted me-1"
                                         onclick="openItemModal(${item.itemSeq}, ${item.catSeq}, '${item.catNm}', '${item.itemNm}', ${item.budgetAmt}, ${empty item.ccSeq ? 'null' : item.ccSeq})"
-                                        title="수정">✏️</button>
+                                        title="수정"><span class="material-symbols-rounded ms-sm">edit</span></button>
                                 <button class="btn btn-sm btn-link p-0 text-danger"
                                         onclick="deleteItem(${item.itemSeq})"
-                                        title="삭제">🗑</button>
+                                        title="삭제"><span class="material-symbols-rounded ms-sm">delete</span></button>
                               </td>
                             </tr>
                           </c:forEach>
@@ -180,7 +180,8 @@
       <!-- 이달 수입 수기 등록 섹션 -->
       <div class="card homes-card mt-4">
         <div class="card-header bg-transparent d-flex align-items-center justify-content-between">
-          <span class="fw-semibold">💰 이달 수입 등록 (${thisMonth.substring(0,4)}년 ${thisMonth.substring(4,6)}월)</span>
+          <span class="fw-semibold d-flex align-items-center gap-1">
+            <span class="material-symbols-rounded ms-sm" style="color:#16a34a;">add_circle</span>이달 수입 등록 (${thisMonth.substring(0,4)}년 ${thisMonth.substring(4,6)}월)</span>
           <button class="btn btn-sm btn-outline-success homes-pill px-3" onclick="openIncomeModal(null)">+ 수입 추가</button>
         </div>
         <div class="card-body p-0">
@@ -214,10 +215,10 @@
                         <td class="text-center">
                           <button class="btn btn-sm btn-link p-0 text-muted me-1"
                                   onclick="openIncomeModal(${inc.incomeSeq}, ${inc.ccSeq}, '${inc.ccNm}', ${inc.actualAmt}, '${inc.memo}')"
-                                  title="수정">✏️</button>
+                                  title="수정"><span class="material-symbols-rounded ms-sm">edit</span></button>
                           <button class="btn btn-sm btn-link p-0 text-danger"
                                   onclick="deleteIncome(${inc.incomeSeq})"
-                                  title="삭제">🗑</button>
+                                  title="삭제"><span class="material-symbols-rounded ms-sm">delete</span></button>
                         </td>
                       </tr>
                     </c:forEach>

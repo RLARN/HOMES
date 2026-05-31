@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Secrets — API 키, DB 비밀번호 등 민감 정보 ###
+src/main/resources/application-secret.properties
+vapid-keys.json

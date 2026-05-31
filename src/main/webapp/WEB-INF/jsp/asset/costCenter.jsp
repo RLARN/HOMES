@@ -30,7 +30,7 @@
       <!-- 에러 메시지 -->
       <c:if test="${not empty error}">
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-          <strong>⚠ 삭제 불가:</strong> ${error}
+          <span class="material-symbols-rounded ms-sm">warning</span><strong>삭제 불가:</strong> ${error}
           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
       </c:if>
@@ -187,7 +187,7 @@
 
       <!-- 안내 박스 -->
       <div class="alert alert-info mt-4 small" style="border-radius:12px;">
-        <strong>💡 수지계정 안내</strong><br>
+        <span class="material-symbols-rounded ms-sm">lightbulb</span><strong>수지계정 안내</strong><br>
         • <strong>자동 생성</strong>: 정기지출 등록 시 동일한 수지계정가 자동으로 생성됩니다. 정기지출 삭제 시 함께 삭제됩니다.<br>
         • <strong>수동 등록</strong>: 직접 수지계정를 만들어 수입원을 연결할 수 있습니다.<br>
         • <strong>삭제 불가</strong>: 정기지출에서 수지계정로 사용 중이거나, 수지계정에 수입원으로 연결된 정기수입은 삭제할 수 없습니다.
@@ -317,7 +317,7 @@ function deleteCc(ccSeq, ccNm) {
     if (res.success) {
       location.reload();
     } else {
-      alert('⚠ 삭제 불가\n\n' + (res.message || '알 수 없는 오류'));
+      alert('삭제 불가\n\n' + (res.message || '알 수 없는 오류'));
     }
   });
 }

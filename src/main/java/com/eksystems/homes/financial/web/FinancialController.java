@@ -11,7 +11,6 @@ import com.eksystems.homes.asset.vo.CostCenterStatusVO;
 import com.eksystems.homes.asset.vo.LoanVO;
 import com.eksystems.homes.living.service.LivingService;
 import com.eksystems.homes.living.vo.LivingExpenseSummaryVO;
-import com.eksystems.homes.living.vo.LivingIncomeMstVO;
 import com.eksystems.homes.living.vo.ManualCashflowVO;
 import com.eksystems.homes.login.vo.LoginVO;
 import org.springframework.stereotype.Controller;
@@ -102,8 +101,11 @@ public class FinancialController {
             ccList = costCenterService.getStatusList(familyId, fromYymm, toYymm);
         }
 
-        // 수기 현금흐름 (INCOME + EXPENSE) 전체 — CC_SEQ 기준 그룹핑 (MANUAL_CASHFLOW_MST)
-        List<ManualCashflowVO> allManualEntries = livingService.getManualCfListByRange(familyId, fromYymm, toYymm);
+        // 수기 현금흐름 — snapshot 모드면 HST, 아니면 라이브 테이블
+        // (월간 snapshot만 지원하므로 useSnapshot=true는 항상 monthly)
+        List<ManualCashflowVO> allManualEntries = useSnapshot
+                ? snapshotService.getManualCfHst(familyId, period)
+                : livingService.getManualCfListByRange(familyId, fromYymm, toYymm);
         List<ManualCashflowVO> incomeEntries    = allManualEntries.stream()
                 .filter(i -> "INCOME".equals(i.getFlowType())).toList();
         List<ManualCashflowVO> expenseEntries   = allManualEntries.stream()

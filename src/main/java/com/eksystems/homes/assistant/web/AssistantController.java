@@ -78,7 +78,8 @@ public class AssistantController {
         try {
             emitter.send(SseEmitter.event().data(om.writeValueAsString(event)));
         } catch (Exception e) {
-            emitter.completeWithError(e);
+            /* 개별 이벤트 전송 실패는 조용히 무시 — completeWithError 하면
+               이후 모든 이벤트(done_data 포함)가 클라이언트에 도달하지 않음 */
         }
     }
 

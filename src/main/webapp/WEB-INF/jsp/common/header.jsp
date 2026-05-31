@@ -3,9 +3,9 @@
 <nav class="navbar navbar-expand-lg navbar-dark homes-topbar sticky-top">
   <div class="container-fluid px-3">
 
-    <button class="btn btn-outline-light d-lg-none me-2" type="button"
-            data-bs-toggle="offcanvas" data-bs-target="#homesSidebar">
-      ☰
+    <button class="btn btn-outline-light d-lg-none me-2 d-flex align-items-center justify-content-center" type="button"
+            data-bs-toggle="offcanvas" data-bs-target="#homesSidebar" style="width:36px;height:36px;padding:0;">
+      <span class="material-symbols-rounded" style="font-size:22px;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;">menu</span>
     </button>
 
     <a class="navbar-brand d-flex align-items-center gap-2"
@@ -15,19 +15,22 @@
     </a>
 
     <div class="ms-auto d-flex align-items-center gap-2">
-      <a class="btn btn-sm btn-outline-light homes-pill homes-ai-btn"
+      <a class="btn btn-sm btn-outline-light homes-pill homes-ai-btn d-flex align-items-center gap-1"
          href="${pageContext.request.contextPath}/assistant"
-         title="AI Assistant">H-Ops AI</a>
+         title="AI Assistant">
+        <span class="ms-icon material-symbols-rounded">grid_view</span>
+         <span>H-Ops AI</span>
+      </a>
 
       <!-- 알림 구독 버튼 -->
-      <button id="pushBellBtn"
-              class="btn btn-sm btn-outline-light homes-pill"
+<%--      <button id="pushBellBtn"
+              class="btn btn-sm btn-outline-light homes-pill d-flex align-items-center justify-content-center"
               type="button"
               title="알림 설정"
               onclick="HOMES_PUSH.toggleSubscription(this)"
-              style="font-size:16px; min-width:38px;display: none">
-        🔔
-      </button>
+              style="min-width:36px;height:30px;padding:0 8px;display:none;">
+        <span class="material-symbols-rounded" style="font-size:18px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20;">notifications</span>
+      </button>--%>
 
       <div class="dropdown">
 		<button class="btn btn-sm btn-light homes-pill dropdown-toggle"
@@ -239,6 +242,14 @@
 	  }
 	}
 
+	/* Material Symbols 공통 헬퍼 */
+	.ms-btn  { font-size: 18px; vertical-align: -4px; line-height: 1;
+	           font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20; }
+	.ms-lg   { font-size: 48px; line-height: 1;
+	           font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 48; }
+	.ms-sm   { font-size: 14px; vertical-align: -3px; line-height: 1;
+	           font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20; }
+
 	/* =========================
 	   Main cards
 	========================= */
@@ -311,12 +322,12 @@ window.HOMES_PUSH = (function () {
     if (!btn) return;
     const sub = await getSubscription();
     if (sub) {
-      btn.textContent = '🔔';
+      btn.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;font-variation-settings:\'FILL\' 1,\'wght\' 400,\'GRAD\' 0,\'opsz\' 20;">notifications_active</span>';
       btn.title = '알림 구독 중 (클릭: 해제)';
       btn.classList.remove('btn-outline-light');
       btn.classList.add('btn-light');
     } else {
-      btn.textContent = '🔕';
+      btn.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;font-variation-settings:\'FILL\' 1,\'wght\' 400,\'GRAD\' 0,\'opsz\' 20;">notifications_off</span>';
       btn.title = '알림 구독하기';
       btn.classList.remove('btn-light');
       btn.classList.add('btn-outline-light');

@@ -111,16 +111,16 @@
                 </a>
                 <a href="${pageContext.request.contextPath}/financial/statement?mode=${mode}&period=${period}&viewMode=snapshot"
                    class="btn homes-pill btn-sm ${viewMode == 'snapshot' ? 'btn-warning' : 'btn-outline-warning'}">
-                  📌 전표처리본
+                  <span class="material-symbols-rounded ms-sm">push_pin</span>전표처리본
                 </a>
               </div>
             </c:if>
-            <button id="snapshotBtn" class="btn btn-outline-primary homes-pill px-3" onclick="doSnapshot()">
-              📌 전표처리
+            <button id="snapshotBtn" class="btn btn-outline-primary homes-pill px-3 d-flex align-items-center gap-1" onclick="doSnapshot()">
+              <span class="material-symbols-rounded ms-sm">push_pin</span>전표처리
             </button>
           </c:if>
-          <button class="btn btn-outline-secondary homes-pill px-3" onclick="window.print()">
-            🖨 인쇄 / PDF
+          <button class="btn btn-outline-secondary homes-pill px-3 d-flex align-items-center gap-1" onclick="window.print()">
+            <span class="material-symbols-rounded ms-sm">print</span>인쇄 / PDF
           </button>
         </div>
       </div>
@@ -160,7 +160,7 @@
         <c:if test="${months>1}"><span class="text-muted small">(12개월 합산)</span></c:if>
         <c:choose>
           <c:when test="${useSnapshot}">
-            <span class="badge bg-warning text-dark" style="font-size:11px;">📌 전표처리본</span>
+            <span class="badge bg-warning text-dark d-inline-flex align-items-center gap-1" style="font-size:11px;"><span class="material-symbols-rounded" style="font-size:12px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20;">push_pin</span>전표처리본</span>
           </c:when>
           <c:when test="${hasSnapshot}">
             <span class="badge bg-primary-subtle text-primary border" style="font-size:11px;">⚡ 최신본</span>
@@ -172,7 +172,7 @@
            ① 수지계정 손익계산서  ← 핵심
       ════════════════════════════════════════════════════════ --%>
       <div class="stmt-box">
-        <div class="stmt-box-title">💹 손익계산서 — 수지계정 기준</div>
+        <div class="stmt-box-title d-flex align-items-center gap-1"><span class="material-symbols-rounded ms-sm">receipt_long</span>손익계산서 — 수지계정 기준</div>
         <table class="st">
           <thead>
             <tr>
@@ -252,10 +252,10 @@
                               <span style="color:#16a34a;">↗</span>
                               <c:choose>
                                 <c:when test="${not empty mi.title}"><c:out value="${mi.title}"/></c:when>
-                                <c:otherwise>수기수입 (${mi.incomeYymm.substring(0,4)}.${mi.incomeYymm.substring(4,6)})</c:otherwise>
+                                <c:otherwise>수기수입 (${mi.flowYymm.substring(0,4)}.${mi.flowYymm.substring(4,6)})</c:otherwise>
                               </c:choose>
                               <c:if test="${not empty mi.memo}"><span style="color:#94a3b8;"> — <c:out value="${mi.memo}"/></span></c:if>
-                              <span style="color:#94a3b8; font-size:11px;">[수기·${mi.incomeYymm.substring(0,4)}.${mi.incomeYymm.substring(4,6)}]</span>
+                              <span style="color:#94a3b8; font-size:11px;">[수기·${mi.flowYymm.substring(0,4)}.${mi.flowYymm.substring(4,6)}]</span>
                             </td>
                             <td style="padding:.35rem 1rem; text-align:right; color:#16a34a;">
                               <fmt:formatNumber value="${mi.actualAmt}" pattern="#,##0"/>
@@ -305,10 +305,10 @@
                               <span style="color:#dc2626;">↘</span>
                               <c:choose>
                                 <c:when test="${not empty me.title}"><c:out value="${me.title}"/></c:when>
-                                <c:otherwise>수기지출 (${me.incomeYymm.substring(0,4)}.${me.incomeYymm.substring(4,6)})</c:otherwise>
+                                <c:otherwise>수기지출 (${me.flowYymm.substring(0,4)}.${me.flowYymm.substring(4,6)})</c:otherwise>
                               </c:choose>
                               <c:if test="${not empty me.memo}"><span style="color:#94a3b8;"> — <c:out value="${me.memo}"/></span></c:if>
-                              <span style="color:#94a3b8; font-size:11px;">[수기·${me.incomeYymm.substring(0,4)}.${me.incomeYymm.substring(4,6)}]</span>
+                              <span style="color:#94a3b8; font-size:11px;">[수기·${me.flowYymm.substring(0,4)}.${me.flowYymm.substring(4,6)}]</span>
                             </td>
                             <td></td>
                             <td style="padding:.35rem 1rem; text-align:right; color:#dc2626;">
@@ -358,7 +358,7 @@
            ② 재무상태표 (자산 현황)
       ════════════════════════════════════════════════════════ --%>
       <div class="stmt-box">
-        <div class="stmt-box-title">🏦 재무상태표 — 현재 기준 (순자산)</div>
+        <div class="stmt-box-title d-flex align-items-center gap-1"><span class="material-symbols-rounded ms-sm">account_balance</span>재무상태표 — 현재 기준 (순자산)</div>
         <div class="row g-0">
           <div class="col-12 col-md-6" style="border-right:1px solid #e2e8f0;">
             <table class="st">
@@ -442,14 +442,14 @@
            ③ 참고자료
       ════════════════════════════════════════════════════════ --%>
       <div class="stmt-box-title mb-2" style="border-radius:8px; border:1px dashed #cbd5e1; background:#f8fafc;">
-        📎 추가정보 <span class="badge-ref">수지계정 미 지정시 손익계산 별도 관리 </span>
+        <span class="material-symbols-rounded ms-sm">attach_file</span>추가정보 <span class="badge-ref">수지계정 미 지정시 손익계산 별도 관리 </span>
       </div>
 
       <%-- 수기 등록 수입 (수지계정별) --%>
       <c:if test="${not empty incomeEntries}">
       <div class="ref-section">
         <button class="ref-toggle" onclick="toggleRef(this)">
-          <span>💰 수기 등록 수입 상세 (${incomeEntries.size()}건 · 수지계정별 손익에 포함됨)</span>
+          <span class="d-flex align-items-center gap-1"><span class="material-symbols-rounded ms-sm" style="color:#16a34a;">add_circle</span>수기 등록 수입 상세 (${incomeEntries.size()}건 · 수지계정별 손익에 포함됨)</span>
           <span class="ref-arrow">▲</span>
         </button>
         <div class="ref-body">
@@ -460,7 +460,7 @@
                 <tr>
                   <td><c:out value="${inc.ccNm}"/></td>
                   <td class="fw-semibold"><c:out value="${inc.title}"/></td>
-                  <td class="c-gray small">${inc.incomeYymm.substring(0,4)}년 ${inc.incomeYymm.substring(4,6)}월</td>
+                  <td class="c-gray small">${inc.flowYymm.substring(0,4)}년 ${inc.flowYymm.substring(4,6)}월</td>
                   <td class="text-end c-pos"><fmt:formatNumber value="${inc.actualAmt}" pattern="#,##0"/></td>
                   <td class="c-gray small"><c:out value="${inc.memo}"/></td>
                 </tr>
@@ -474,7 +474,7 @@
       <%-- 정기수입 --%>
       <div class="ref-section">
         <button class="ref-toggle" onclick="toggleRef(this)">
-          <span>📥 정기수입 계획 (${incomePlans.size()}건
+          <span class="d-flex align-items-center gap-1"><span class="material-symbols-rounded ms-sm">move_to_inbox</span>정기수입 계획 (${incomePlans.size()}건
             <c:if test="${months>1}"> · ×${months}개월</c:if>)</span>
           <span class="ref-arrow">▲</span>
         </button>
@@ -509,7 +509,7 @@
       <%-- 정기지출 (EXPENSE/SAVING/INVEST 통합) --%>
       <div class="ref-section">
         <button class="ref-toggle" onclick="toggleRef(this)">
-          <span>📤 정기지출·저축·투자 계획 (${expensePlans.size() + savingPlans.size() + investPlans.size()}건
+          <span class="d-flex align-items-center gap-1"><span class="material-symbols-rounded ms-sm">outbox</span>정기지출·저축·투자 계획 (${expensePlans.size() + savingPlans.size() + investPlans.size()}건
             <c:if test="${months>1}"> · ×${months}개월</c:if>)</span>
           <span class="ref-arrow">▲</span>
         </button>
@@ -564,7 +564,7 @@
       <c:if test="${not empty livingExpenses}">
       <div class="ref-section">
         <button class="ref-toggle" onclick="toggleRef(this)">
-          <span>🏠 생활비 예산 vs 실적 (${dispPeriod})</span>
+          <span class="d-flex align-items-center gap-1"><span class="material-symbols-rounded ms-sm">home</span>생활비 예산 vs 실적 (${dispPeriod})</span>
           <span class="ref-arrow">▲</span>
         </button>
         <div class="ref-body">
@@ -624,7 +624,7 @@
 
       <!-- 인쇄 안내 -->
       <div class="alert alert-light border no-print mt-2" style="font-size:12px;">
-        💡 <strong>[인쇄 / PDF]</strong>를 누르면 브라우저 인쇄창이 열립니다.
+        <span class="material-symbols-rounded ms-sm">lightbulb</span> <strong>[인쇄 / PDF]</strong>를 누르면 브라우저 인쇄창이 열립니다.
         PDF 저장은 프린터에서 <strong>"PDF로 저장"</strong>을 선택하세요.
       </div>
 
@@ -643,13 +643,13 @@ function doSnapshot() {
 
   const btn = document.getElementById('snapshotBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ 처리 중...';
+  btn.textContent = '처리 중...';
 
   fetch('${pageContext.request.contextPath}/asset/snapshot/' + period, { method: 'POST' })
     .then(r => r.json())
     .then(res => {
       if (res.success) {
-        btn.textContent = '✅ ' + res.message;
+        btn.textContent = res.message;
         btn.classList.replace('btn-outline-primary', 'btn-success');
         // 전표처리 완료 후 페이지 새로고침해서 토글 버튼 표시
         setTimeout(() => {
@@ -658,13 +658,13 @@ function doSnapshot() {
       } else {
         alert('전표처리 실패: ' + res.message);
         btn.disabled = false;
-        btn.textContent = '📌 전표처리';
+        btn.innerHTML = '<span class="material-symbols-rounded ms-sm">push_pin</span>전표처리';
       }
     })
     .catch(() => {
       alert('전표처리 중 오류가 발생했습니다.');
       btn.disabled = false;
-      btn.textContent = '📌 전표처리';
+      btn.innerHTML = '<span class="material-symbols-rounded ms-sm">push_pin</span>전표처리';
     });
 }
 

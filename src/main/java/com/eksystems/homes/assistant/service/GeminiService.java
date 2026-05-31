@@ -2,12 +2,23 @@ package com.eksystems.homes.assistant.service;
 
 import com.eksystems.homes.asset.mapper.AssetMapper;
 import com.eksystems.homes.asset.mapper.CashFlowMapper;
+import com.eksystems.homes.asset.service.CostCenterService;
 import com.eksystems.homes.asset.service.ForecastService;
+import com.eksystems.homes.asset.service.SnapshotService;
+import com.eksystems.homes.dms.mapper.DmsMapper;
+import com.eksystems.homes.dms.vo.DmsFileVO;
+import com.eksystems.homes.dms.vo.DmsFolderVO;
+import com.eksystems.homes.sns.mapper.SnsMapper;
+import com.eksystems.homes.sns.vo.SnsPostVO;
+import com.eksystems.homes.asset.vo.AssetChangeSummaryVO;
 import com.eksystems.homes.asset.vo.AssetSummaryVO;
 import com.eksystems.homes.asset.vo.AssetVO;
 import com.eksystems.homes.asset.vo.CashFlowPlanVO;
+import com.eksystems.homes.asset.vo.CostCenterStatusVO;
 import com.eksystems.homes.asset.vo.LoanVO;
 import com.eksystems.homes.assistant.vo.ChatResponse;
+import com.eksystems.homes.living.service.LivingService;
+import com.eksystems.homes.living.vo.LivingIncomeMstVO;
 import com.eksystems.homes.note.service.NoteService;
 import com.eksystems.homes.note.vo.NoteVO;
 import com.eksystems.homes.scm.service.ScmService;
@@ -24,8 +35,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Service
 public class GeminiService {
@@ -45,8 +59,12 @@ public class GeminiService {
             Map.entry("insert_note",            "공유메모 등록"),
             Map.entry("update_note",            "공유메모 수정"),
             // ── 자산관리 ──────────────────────────────────────────────
-            Map.entry("get_asset_summary",      "자산 요약 조회"),
-            Map.entry("get_asset_forecast",     "자산변동 예측 분석")
+            Map.entry("get_asset_summary",          "자산 요약 조회"),
+            Map.entry("get_asset_forecast",         "자산변동 예측 분석"),
+            // ── 재정 분석 ─────────────────────────────────────────────
+            Map.entry("get_snapshot_months",        "전표처리 월 목록 조회"),
+            Map.entry("get_cost_center_status",     "수지계정현황 조회"),
+            Map.entry("get_asset_change_history",   "자산변동현황 조회")
     );
 
     @Value("${assistant.provider:gemini}")
@@ -64,11 +82,16 @@ public class GeminiService {
     @Value("${ollama.model:gemma4}")
     private String ollamaModel;
 
-    private final ScmService      scmService;
-    private final NoteService     noteService;
-    private final AssetMapper     assetMapper;
-    private final CashFlowMapper  cashFlowMapper;
-    private final ForecastService forecastService;
+    private final ScmService        scmService;
+    private final NoteService       noteService;
+    private final AssetMapper       assetMapper;
+    private final CashFlowMapper    cashFlowMapper;
+    private final ForecastService   forecastService;
+    private final SnapshotService   snapshotService;
+    private final CostCenterService costCenterService;
+    private final LivingService     livingService;
+    private final DmsMapper         dmsMapper;
+    private final SnsMapper         snsMapper;
     private final ObjectMapper om = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -76,12 +99,22 @@ public class GeminiService {
 
     public GeminiService(ScmService scmService, NoteService noteService,
                          AssetMapper assetMapper, CashFlowMapper cashFlowMapper,
-                         ForecastService forecastService) {
-        this.scmService      = scmService;
-        this.noteService     = noteService;
-        this.assetMapper     = assetMapper;
-        this.cashFlowMapper  = cashFlowMapper;
-        this.forecastService = forecastService;
+                         ForecastService forecastService,
+                         SnapshotService snapshotService,
+                         CostCenterService costCenterService,
+                         LivingService livingService,
+                         DmsMapper dmsMapper,
+                         SnsMapper snsMapper) {
+        this.scmService        = scmService;
+        this.noteService       = noteService;
+        this.assetMapper       = assetMapper;
+        this.cashFlowMapper    = cashFlowMapper;
+        this.forecastService   = forecastService;
+        this.snapshotService   = snapshotService;
+        this.costCenterService = costCenterService;
+        this.livingService     = livingService;
+        this.dmsMapper         = dmsMapper;
+        this.snsMapper         = snsMapper;
     }
 
     public ChatResponse chat(String userMessage,
@@ -139,6 +172,18 @@ public class GeminiService {
      */
     public String analyzeAssetForecast(Map<String, Object> aiContext) throws Exception {
         String prompt = buildForecastPrompt(aiContext);
+        return analyzePrompt(prompt);
+    }
+
+    /**
+     * 화면별 요약 컨텍스트를 받아 단발 분석 텍스트를 반환한다.
+     */
+    public String analyzeFinancialReport(Map<String, Object> aiContext) throws Exception {
+        String prompt = buildFinancialReportPrompt(aiContext);
+        return analyzePrompt(prompt);
+    }
+
+    private String analyzePrompt(String prompt) throws Exception {
         // num_predict를 낮게 유지 — 핵심만 짧게 받음
 
         if ("ollama".equalsIgnoreCase(provider)) {
@@ -193,6 +238,27 @@ public class GeminiService {
         List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
         if (parts == null) return "";
         return parts.stream().map(p -> str(p.get("text"))).reduce("", String::concat);
+    }
+
+    private String buildFinancialReportPrompt(Map<String, Object> ctx) {
+        String reportTitle = str(ctx.get("reportTitle"));
+        String reportType = str(ctx.get("reportType"));
+        String generatedAt = str(ctx.get("generatedAt"));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("우리 가족 재정 화면의 요약 데이터야. 화면 성격에 맞춰 한국어로 분석 리포트를 작성해줘.\n");
+        sb.append("제목: ").append(reportTitle.isBlank() ? "재정 분석 리포트" : reportTitle).append("\n");
+        if (!reportType.isBlank()) sb.append("화면 유형: ").append(reportType).append("\n");
+        if (!generatedAt.isBlank()) sb.append("생성일: ").append(generatedAt).append("\n");
+        sb.append("\n다음 형식을 지켜줘.\n");
+        sb.append("① 핵심 요약 2~3문장\n");
+        sb.append("② 좋아 보이는 점\n");
+        sb.append("③ 주의할 점/이상 징후\n");
+        sb.append("④ 바로 할 수 있는 개선 액션 2~3개\n");
+        sb.append("구체적인 금액과 비율을 언급하고, 없는 데이터는 추측하지 말아줘.\n\n");
+        sb.append("[화면 요약 JSON]\n");
+        sb.append(toJson(ctx));
+        return sb.toString();
     }
 
     @SuppressWarnings("unchecked")
@@ -484,54 +550,108 @@ public class GeminiService {
                     emit(onProgress, "status", "정기수입/지출 검색 중...");
                     List<CashFlowPlanVO> plans = cashFlowMapper.searchPlans(familyId, keyword);
 
-                    yield Map.of(
-                        "keyword", keyword,
-                        "notes", notes.stream().map(n -> Map.of(
-                                "domain", "note", "noteSeq", n.getNoteSeq(),
-                                "title", nvl(n.getTitle()),
-                                "contentPreview", preview(n.getContent()),
-                                "regId", nvl(n.getRegId()),
-                                "updatedAt", nvl(n.getUpdDtText())
-                        )).toList(),
-                        "depositRequests", deposits.stream().map(v -> Map.of(
-                                "domain", "depositRequest", "depReqSeq", v.getDepReqSeq(),
-                                "storeInfo", nvl(v.getStoreInfo()),
-                                "amount", v.getAmount() == null ? 0L : v.getAmount(),
-                                "reqStatus", nvl(v.getReqStatus()),
-                                "reqDesc", nvl(v.getReqDesc()),
-                                "regId", nvl(v.getRegId()),
-                                "requestDt", nvl(v.getRequestDt())
-                        )).toList(),
-                        "assets", assets.stream().map(a -> Map.of(
-                                "domain", "asset", "assetSeq", a.getAssetSeq(),
-                                "assetNm", nvl(a.getAssetNm()),
-                                "assetTypeNm", nvl(a.getAssetTypeNm()),
-                                "liquidYn", nvl(a.getLiquidYn()),
-                                "amount", a.getAmount() == null ? 0L : a.getAmount(),
-                                "disposeYn", nvl(a.getDisposeYn()),
-                                "memo", nvl(a.getMemo())
-                        )).toList(),
-                        "loans", loans.stream().map(l -> Map.of(
-                                "domain", "loan", "loanSeq", l.getLoanSeq(),
-                                "loanNm", nvl(l.getLoanNm()),
-                                "loanAmount", l.getLoanAmount() == null ? 0L : l.getLoanAmount(),
-                                "currentBalance", l.getCurrentBalance() == null ? 0L : l.getCurrentBalance(),
-                                "interestRate", l.getInterestRate() == null ? "" : l.getInterestRate().toPlainString(),
-                                "closeYn", nvl(l.getCloseYn()),
-                                "memo", nvl(l.getMemo())
-                        )).toList(),
-                        "cashFlowPlans", plans.stream().map(p -> Map.of(
-                                "domain", p.getFlowType().equals("INCOME") ? "incomePlan" : "expensePlan",
-                                "planSeq", p.getPlanSeq(),
-                                "planNm", nvl(p.getPlanNm()),
-                                "planTypeNm", nvl(p.getPlanTypeNm()),
-                                "flowType", nvl(p.getFlowType()),
-                                "amount", p.getAmount() == null ? 0L : p.getAmount(),
-                                "cycleDesc", nvl(p.getCycleDesc()),
-                                "useYn", nvl(p.getUseYn()),
-                                "memo", nvl(p.getMemo())
-                        )).toList()
-                    );
+                    emit(onProgress, "status", "공유드라이브 검색 중...");
+                    List<DmsFileVO> dmsFiles = dmsMapper.searchFiles(familyId, keyword);
+                    List<DmsFolderVO> dmsFolders = dmsMapper.searchFolders(familyId, keyword);
+
+                    emit(onProgress, "status", "가족앨범 검색 중...");
+                    List<SnsPostVO> snsPosts = snsMapper.searchPosts(familyId, keyword);
+
+                    Map<String, Object> searchResult = new LinkedHashMap<>();
+                    searchResult.put("keyword", keyword);
+                    searchResult.put("notes", notes.stream().map(n -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("domain", "note");
+                        m.put("noteSeq", n.getNoteSeq());
+                        m.put("title", nvl(n.getTitle()));
+                        m.put("contentPreview", preview(n.getContent()));
+                        m.put("regId", nvl(n.getRegId()));
+                        m.put("updatedAt", nvl(n.getUpdDtText()));
+                        m.put("url", "/note/detail/" + n.getNoteSeq());
+                        return m;
+                    }).toList());
+                    searchResult.put("depositRequests", deposits.stream().map(v -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("domain", "depositRequest");
+                        m.put("depReqSeq", v.getDepReqSeq());
+                        m.put("storeInfo", nvl(v.getStoreInfo()));
+                        m.put("amount", v.getAmount() == null ? 0L : v.getAmount());
+                        m.put("reqStatus", nvl(v.getReqStatus()));
+                        m.put("reqDesc", nvl(v.getReqDesc()));
+                        m.put("regId", nvl(v.getRegId()));
+                        m.put("requestDt", nvl(v.getRequestDt()));
+                        m.put("url", "/scm/deposit/depositRequest");
+                        return m;
+                    }).toList());
+                    searchResult.put("assets", assets.stream().map(a -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("domain", "asset");
+                        m.put("assetSeq", a.getAssetSeq());
+                        m.put("assetNm", nvl(a.getAssetNm()));
+                        m.put("assetTypeNm", nvl(a.getAssetTypeNm()));
+                        m.put("liquidYn", nvl(a.getLiquidYn()));
+                        m.put("amount", a.getAmount() == null ? 0L : a.getAmount());
+                        m.put("disposeYn", nvl(a.getDisposeYn()));
+                        m.put("memo", nvl(a.getMemo()));
+                        m.put("url", "/asset/ledger");
+                        return m;
+                    }).toList());
+                    searchResult.put("loans", loans.stream().map(l -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("domain", "loan");
+                        m.put("loanSeq", l.getLoanSeq());
+                        m.put("loanNm", nvl(l.getLoanNm()));
+                        m.put("loanAmount", l.getLoanAmount() == null ? 0L : l.getLoanAmount());
+                        m.put("currentBalance", l.getCurrentBalance() == null ? 0L : l.getCurrentBalance());
+                        m.put("interestRate", l.getInterestRate() == null ? "" : l.getInterestRate().toPlainString());
+                        m.put("closeYn", nvl(l.getCloseYn()));
+                        m.put("memo", nvl(l.getMemo()));
+                        m.put("url", "/asset/loan");
+                        return m;
+                    }).toList());
+                    searchResult.put("cashFlowPlans", plans.stream().map(p -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("domain", p.getFlowType().equals("INCOME") ? "incomePlan" : "expensePlan");
+                        m.put("planSeq", p.getPlanSeq());
+                        m.put("planNm", nvl(p.getPlanNm()));
+                        m.put("planTypeNm", nvl(p.getPlanTypeNm()));
+                        m.put("flowType", nvl(p.getFlowType()));
+                        m.put("amount", p.getAmount() == null ? 0L : p.getAmount());
+                        m.put("cycleDesc", nvl(p.getCycleDesc()));
+                        m.put("useYn", nvl(p.getUseYn()));
+                        m.put("memo", nvl(p.getMemo()));
+                        m.put("url", "INCOME".equals(p.getFlowType()) ? "/asset/income" : "/asset/expense");
+                        return m;
+                    }).toList());
+                    searchResult.put("dmsFiles", dmsFiles.stream().map(f -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("domain", "dmsFile");
+                        m.put("fileSeq", f.getFileSeq());
+                        m.put("fileNm", nvl(f.getFileNm()));
+                        m.put("mimeType", nvl(f.getMimeType()));
+                        m.put("regId", nvl(f.getRegId()));
+                        m.put("url", f.getFolderSeq() != null ? "/dms?folderSeq=" + f.getFolderSeq() : "/dms");
+                        return m;
+                    }).toList());
+                    searchResult.put("dmsFolders", dmsFolders.stream().map(f -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("domain", "dmsFolder");
+                        m.put("folderSeq", f.getFolderSeq());
+                        m.put("folderNm", nvl(f.getFolderNm()));
+                        m.put("regId", nvl(f.getRegId()));
+                        m.put("url", "/dms?folderSeq=" + f.getFolderSeq());
+                        return m;
+                    }).toList());
+                    searchResult.put("snsPosts", snsPosts.stream().map(p -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("domain", "snsPost");
+                        m.put("postSeq", p.getPostSeq());
+                        m.put("contentPreview", preview(p.getContent()));
+                        m.put("regId", nvl(p.getRegId()));
+                        m.put("url", "/sns");
+                        return m;
+                    }).toList());
+                    yield searchResult;
                 }
                 case "get_asset_summary" -> {
                     emit(onProgress, "status", "자산 현황 조회 중...");
@@ -554,7 +674,13 @@ public class GeminiService {
                 case "get_asset_forecast" -> {
                     emit(onProgress, "status", "자산변동 예측 계산 중...");
                     Object monthsArg = args.getOrDefault("months", 12);
-                    int months = monthsArg instanceof Number n ? Math.min(n.intValue(), 36) : 12;
+                    int months;
+                    if (monthsArg instanceof Number n) {
+                        months = Math.min(Math.max(n.intValue(), 1), 120);
+                    } else {
+                        try { months = Math.min(Math.max(Integer.parseInt(String.valueOf(monthsArg).trim()), 1), 120); }
+                        catch (NumberFormatException ignored) { months = 12; }
+                    }
                     Map<String, Object> full = forecastService.calcForecast(familyId, months, new int[]{90, 95, 100, 105, 110});
 
                     // AI에게 필요한 핵심 요약만 전달 (전체 배열은 토큰 낭비)
@@ -578,17 +704,19 @@ public class GeminiService {
                         );
                     }).toList();
 
-                    yield Map.of(
-                        "forecastMonths",        months,
-                        "currentNetAsset",       full.get("currentNetAsset"),
-                        "totalAsset",            full.get("totalAsset"),
-                        "totalLoan",             full.get("totalLoan"),
-                        "avgMonthlyIncome",      full.get("avgMonthlyIncome"),
-                        "avgMonthlyExpense",     full.get("avgMonthlyExpense"),
-                        "scenarioSummary",       scenarioSummary,
-                        "activePlanCount",       planSummary == null ? 0 : planSummary.size(),
-                        "planSummary",           planSummary == null ? List.of() : planSummary
-                    );
+                    Map<String, Object> forecastResult = new LinkedHashMap<>();
+                    forecastResult.put("forecastMonths",    months);
+                    forecastResult.put("currentNetAsset",   full.get("currentNetAsset"));
+                    forecastResult.put("totalAsset",        full.get("totalAsset"));
+                    forecastResult.put("totalLoan",         full.get("totalLoan"));
+                    forecastResult.put("avgMonthlyIncome",  full.get("planAvgIncome"));
+                    forecastResult.put("avgMonthlyExpense", full.get("planAvgExpense"));
+                    forecastResult.put("actualAvgMoM",      full.get("actualAvgMoM"));
+                    forecastResult.put("actualityRatio",    full.get("actualityRatio"));
+                    forecastResult.put("scenarioSummary",   scenarioSummary);
+                    forecastResult.put("activePlanCount",   planSummary == null ? 0 : planSummary.size());
+                    forecastResult.put("planSummary",       planSummary == null ? List.of() : planSummary);
+                    yield forecastResult;
                 }
                 case "list_deposit_requests" -> {
                     ScmVO param = new ScmVO();
@@ -706,6 +834,216 @@ public class GeminiService {
                     scmService.deleteDepositRequest(familyId, seq);
                     yield Map.of("result", "삭제완료", "depReqSeq", seq);
                 }
+                // ── 전표처리 월 목록 ──────────────────────────────────────────
+                case "get_snapshot_months" -> {
+                    emit(onProgress, "status", "전표처리 월 목록 조회 중...");
+                    String fromArg = str(args.getOrDefault("fromYymm", "")).trim();
+                    String toArg   = str(args.getOrDefault("toYymm", "")).trim();
+
+                    List<AssetChangeSummaryVO> all = snapshotService.getAssetChangeSummary(familyId);
+                    List<String> snapshotMonths = all.stream()
+                            .map(AssetChangeSummaryVO::getHstYymm)
+                            .filter(ym -> (fromArg.isBlank() || ym.compareTo(fromArg) >= 0)
+                                    && (toArg.isBlank() || ym.compareTo(toArg) <= 0))
+                            .sorted()
+                            .toList();
+
+                    String latestSnapshot = snapshotMonths.isEmpty() ? null
+                            : snapshotMonths.get(snapshotMonths.size() - 1);
+                    String earliestSnapshot = snapshotMonths.isEmpty() ? null
+                            : snapshotMonths.get(0);
+
+                    yield Map.of(
+                        "snapshotMonths",    snapshotMonths,
+                        "count",             snapshotMonths.size(),
+                        "earliest",          earliestSnapshot != null ? earliestSnapshot : "",
+                        "latest",            latestSnapshot   != null ? latestSnapshot   : "",
+                        "currentMonth",      LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM")),
+                        "note",              "snapshotMonths 목록에 있는 달만 전표처리(확정) 데이터입니다. 없는 달은 실시간(미확정) 계획 데이터로 조회됩니다."
+                    );
+                }
+
+                // ── 수지계정현황 ──────────────────────────────────────────────
+                case "get_cost_center_status" -> {
+                    String fromYymm = str(args.getOrDefault("fromYymm", "")).trim();
+                    String toYymm   = str(args.getOrDefault("toYymm", "")).trim();
+                    String thisMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
+                    if (fromYymm.isBlank()) fromYymm = thisMonth;
+                    if (toYymm.isBlank())   toYymm   = thisMonth;
+
+                    emit(onProgress, "status", "수지계정현황 조회 중 (" + fromYymm + "~" + toYymm + ")...");
+
+                    List<String> months = aiListMonths(fromYymm, toYymm);
+                    List<String> snapshotMonths = months.stream()
+                            .filter(ym -> snapshotService.hasSnapshot(familyId, ym))
+                            .toList();
+                    List<String> liveMonths = months.stream()
+                            .filter(ym -> !snapshotService.hasSnapshot(familyId, ym))
+                            .toList();
+
+                    List<CostCenterStatusVO> statusList;
+                    if (months.size() == 1) {
+                        if (!snapshotMonths.isEmpty()) {
+                            statusList = snapshotService.getCostCenterHst(familyId, fromYymm);
+                            for (CostCenterStatusVO s : statusList) {
+                                long inc = s.getIncomeMonthlyAmt()  != null ? s.getIncomeMonthlyAmt()  : 0L;
+                                long exp = s.getExpenseMonthlyAmt() != null ? s.getExpenseMonthlyAmt() : 0L;
+                                s.setTotalIncomeAmt(inc);
+                                s.setTotalExpenseAmt(exp);
+                                s.setBalance(inc - exp);
+                            }
+                        } else {
+                            statusList = costCenterService.getStatusList(familyId, fromYymm, toYymm);
+                        }
+                    } else {
+                        statusList = aiBuildMultiMonthStatus(familyId, months);
+                    }
+
+                    // 수기 현금흐름 합산
+                    List<LivingIncomeMstVO> allManual = livingService.getIncomeListByRange(familyId, fromYymm, toYymm);
+                    Map<Long, Long> manualIncByCC = allManual.stream()
+                            .filter(m -> "INCOME".equals(m.getFlowType()) && m.getCcSeq() != null)
+                            .collect(Collectors.groupingBy(LivingIncomeMstVO::getCcSeq,
+                                    Collectors.summingLong(m -> m.getActualAmt() != null ? m.getActualAmt() : 0L)));
+                    Map<Long, Long> manualExpByCC = allManual.stream()
+                            .filter(m -> !"INCOME".equals(m.getFlowType()) && m.getCcSeq() != null)
+                            .collect(Collectors.groupingBy(LivingIncomeMstVO::getCcSeq,
+                                    Collectors.summingLong(m -> m.getActualAmt() != null ? m.getActualAmt() : 0L)));
+
+                    for (CostCenterStatusVO s : statusList) {
+                        long inc = (s.getTotalIncomeAmt()  != null ? s.getTotalIncomeAmt()  : 0L)
+                                 + manualIncByCC.getOrDefault(s.getCcSeq(), 0L);
+                        long exp = (s.getTotalExpenseAmt() != null ? s.getTotalExpenseAmt() : 0L)
+                                 + manualExpByCC.getOrDefault(s.getCcSeq(), 0L);
+                        s.setTotalIncomeAmt(inc);
+                        s.setTotalExpenseAmt(exp);
+                        s.setBalance(inc - exp);
+                    }
+
+                    long grandIncome  = statusList.stream().mapToLong(s -> s.getTotalIncomeAmt()  != null ? s.getTotalIncomeAmt()  : 0L).sum();
+                    long grandExpense = statusList.stream().mapToLong(s -> s.getTotalExpenseAmt() != null ? s.getTotalExpenseAmt() : 0L).sum();
+
+                    List<Map<String, Object>> centers = statusList.stream().map(s -> {
+                        long inc = s.getTotalIncomeAmt()  != null ? s.getTotalIncomeAmt()  : 0L;
+                        long exp = s.getTotalExpenseAmt() != null ? s.getTotalExpenseAmt() : 0L;
+                        Map<String, Object> row = new LinkedHashMap<>();
+                        row.put("ccSeq",    s.getCcSeq());
+                        row.put("name",     nvl(s.getCcNm()));
+                        row.put("type",     nvl(s.getCcType()));
+                        row.put("income",   inc);
+                        row.put("expense",  exp);
+                        row.put("balance",  inc - exp);
+                        row.put("expenseSharePct", grandExpense > 0
+                                ? Math.round(exp * 1000.0 / grandExpense) / 10.0 : 0.0);
+                        return row;
+                    }).toList();
+
+                    yield Map.of(
+                        "period", Map.of("fromYymm", fromYymm, "toYymm", toYymm),
+                        "dataSource", Map.of(
+                            "snapshotMonths", snapshotMonths,
+                            "liveMonths",     liveMonths,
+                            "note",           snapshotMonths.isEmpty()
+                                ? "전체 기간이 실시간(전표처리 전) 데이터입니다."
+                                : liveMonths.isEmpty()
+                                    ? "전체 기간이 전표처리(확정) 데이터입니다."
+                                    : "일부 달만 전표처리됨. 혼재된 데이터입니다."
+                        ),
+                        "summary", Map.of(
+                            "totalIncome",      grandIncome,
+                            "totalExpense",     grandExpense,
+                            "balance",          grandIncome - grandExpense,
+                            "expenseRatePct",   grandIncome > 0
+                                    ? Math.round(grandExpense * 1000.0 / grandIncome) / 10.0 : 0.0,
+                            "costCenterCount",  statusList.size()
+                        ),
+                        "costCenters", centers,
+                        "topExpenseCenters", centers.stream()
+                            .sorted((a, b) -> Long.compare(
+                                    ((Number) b.get("expense")).longValue(),
+                                    ((Number) a.get("expense")).longValue()))
+                            .limit(5).toList(),
+                        "negativeBalanceCenters", centers.stream()
+                            .filter(v -> ((Number) v.get("balance")).longValue() < 0)
+                            .toList()
+                    );
+                }
+
+                // ── 자산변동현황 ──────────────────────────────────────────────
+                case "get_asset_change_history" -> {
+                    String fromYymm = str(args.getOrDefault("fromYymm", "")).trim();
+                    String toYymm   = str(args.getOrDefault("toYymm", "")).trim();
+
+                    emit(onProgress, "status", "자산변동현황 조회 중...");
+
+                    List<AssetChangeSummaryVO> summaryList = snapshotService.getAssetChangeSummary(familyId);
+                    if (!fromYymm.isBlank()) {
+                        String ff = fromYymm;
+                        summaryList = summaryList.stream()
+                                .filter(s -> s.getHstYymm().compareTo(ff) >= 0).toList();
+                    }
+                    if (!toYymm.isBlank()) {
+                        String tt = toYymm;
+                        summaryList = summaryList.stream()
+                                .filter(s -> s.getHstYymm().compareTo(tt) <= 0).toList();
+                    }
+
+                    List<Map<String, Object>> monthly = new ArrayList<>();
+                    for (int i = 0; i < summaryList.size(); i++) {
+                        AssetChangeSummaryVO s = summaryList.get(i);
+                        long momChange = i == 0 ? 0L
+                                : s.getNetAssetAmt() - summaryList.get(i - 1).getNetAssetAmt();
+                        Map<String, Object> row = new LinkedHashMap<>();
+                        row.put("hstYymm",       s.getHstYymm());
+                        row.put("dataSource",    "snapshot");  // 전표처리된 데이터
+                        row.put("totalAsset",    s.getTotalAssetAmt());
+                        row.put("totalLoan",     s.getTotalLoanBalance());
+                        row.put("netAsset",      s.getNetAssetAmt());
+                        row.put("liquidAsset",   s.getLiquidAssetAmt());
+                        row.put("fixedAsset",    s.getFixedAssetAmt());
+                        row.put("monthlyIncome", s.getMonthlyIncome());
+                        row.put("monthlyExpense",s.getMonthlyExpense());
+                        row.put("momNetAsset",   momChange);
+                        monthly.add(row);
+                    }
+
+                    AssetChangeSummaryVO latest = summaryList.isEmpty() ? null
+                            : summaryList.get(summaryList.size() - 1);
+                    long avgMom = summaryList.size() > 1
+                            ? Math.round(monthly.stream().skip(1)
+                                    .mapToLong(m -> ((Number) m.get("momNetAsset")).longValue())
+                                    .average().orElse(0.0))
+                            : 0L;
+                    long posMonths = monthly.stream()
+                            .filter(m -> ((Number) m.get("momNetAsset")).longValue() > 0).count();
+                    long negMonths = monthly.stream()
+                            .filter(m -> ((Number) m.get("momNetAsset")).longValue() < 0).count();
+
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("note", "자산변동현황은 전표처리(스냅샷)된 달의 확정 데이터입니다. 전표처리되지 않은 달은 포함되지 않습니다.");
+                    result.put("dataSource", "snapshot");
+                    result.put("totalMonths", summaryList.size());
+                    result.put("fromYymm", fromYymm.isBlank() ? (monthly.isEmpty() ? "" : str(monthly.get(0).get("hstYymm"))) : fromYymm);
+                    result.put("toYymm",   toYymm.isBlank()   ? (monthly.isEmpty() ? "" : str(monthly.get(monthly.size() - 1).get("hstYymm"))) : toYymm);
+                    if (latest != null) {
+                        result.put("latestMonth", Map.of(
+                            "hstYymm",      latest.getHstYymm(),
+                            "totalAsset",   latest.getTotalAssetAmt(),
+                            "totalLoan",    latest.getTotalLoanBalance(),
+                            "netAsset",     latest.getNetAssetAmt(),
+                            "liquidAsset",  latest.getLiquidAssetAmt(),
+                            "fixedAsset",   latest.getFixedAssetAmt()
+                        ));
+                    }
+                    result.put("movementSummary", Map.of(
+                        "averageMomChange", avgMom,
+                        "positiveMonths",   posMonths,
+                        "negativeMonths",   negMonths
+                    ));
+                    result.put("monthlyTrend", monthly);
+                    yield result;
+                }
+
                 default -> Map.of("error", "알 수 없는 tool입니다: " + name);
             };
         } catch (Exception e) {
@@ -752,14 +1090,18 @@ public class GeminiService {
                   args : {"keyword": <string>}
                   반환 : {
                     keyword,
-                    notes          : [{domain:"note", noteSeq, title, contentPreview, regId, updatedAt}],
-                    depositRequests: [{domain:"depositRequest", depReqSeq, storeInfo, amount, reqStatus, reqDesc, regId, requestDt}],
-                    assets         : [{domain:"asset", assetSeq, assetNm, assetTypeNm, liquidYn, amount, disposeYn, memo}],
-                    loans          : [{domain:"loan", loanSeq, loanNm, loanAmount, currentBalance, interestRate, closeYn, memo}],
-                    cashFlowPlans  : [{domain:"incomePlan"|"expensePlan", planSeq, planNm, planTypeNm, flowType, amount, cycleDesc, useYn, memo}]
+                    notes          : [{domain:"note", noteSeq, title, contentPreview, regId, updatedAt, url}],
+                    depositRequests: [{domain:"depositRequest", depReqSeq, storeInfo, amount, reqStatus, reqDesc, regId, requestDt, url}],
+                    assets         : [{domain:"asset", assetSeq, assetNm, assetTypeNm, liquidYn, amount, disposeYn, memo, url}],
+                    loans          : [{domain:"loan", loanSeq, loanNm, loanAmount, currentBalance, interestRate, closeYn, memo, url}],
+                    cashFlowPlans  : [{domain:"incomePlan"|"expensePlan", planSeq, planNm, planTypeNm, flowType, amount, cycleDesc, useYn, memo, url}],
+                    dmsFiles       : [{domain:"dmsFile", fileSeq, fileNm, mimeType, regId, url}],
+                    dmsFolders     : [{domain:"dmsFolder", folderSeq, folderNm, regId, url}],
+                    snsPosts       : [{domain:"snsPost", postSeq, contentPreview, regId, url}]
                   }
                   언제 사용: 사용자가 "찾아줘", "검색해줘", "있어?", "어디에" 등 조회를 요청할 때.
                   주의: 결과가 비어있으면 "없습니다"라고 정직하게 답하세요. 없는 데이터를 만들지 마세요.
+                  링크 안내: 각 결과의 url 필드를 사용해 "[이름](url)" 마크다운 링크 형태로 사용자가 바로 이동할 수 있게 안내하세요.
 
                 ────────────────────────────────────────
                 ### [자산관리]
@@ -772,7 +1114,7 @@ public class GeminiService {
                   언제 사용: "자산 얼마야?", "순자산", "대출 잔액", "월 지출" 등 현황 질문.
 
                 get_asset_forecast — 향후 자산변동 예측 분석
-                  args : {"months": <number 6~36, default 12>}
+                  args : {"months": <number 1~120, default 12>}
                   반환 : {forecastMonths, currentNetAsset, totalAsset, totalLoan,
                           avgMonthlyIncome, avgMonthlyExpense,
                           scenarioSummary: [{label, weight, startNetAsset, endNetAsset, change}],
@@ -784,6 +1126,66 @@ public class GeminiService {
                     - avgMonthlyExpense > avgMonthlyIncome 이면 현금흐름 적자 경고 필요.
                     - 분석 결과에서 숫자는 반드시 tool 반환값에 있는 숫자만 사용. 직접 계산·추측 금지.
                     - 직접 데이터를 확인 후 심도 있는 인사이트 도출
+
+                ────────────────────────────────────────
+                ### [재정 분석 — 기간별 조회]
+
+                ★ 기간 설정 전략 (반드시 준수):
+                  - 기간을 지정하지 않으면 get_snapshot_months를 먼저 호출해 전표처리된 달을 확인하세요.
+                  - 전표처리된 달은 확정 데이터(신뢰도 높음), 그렇지 않은 달은 실시간 계획 데이터(미확정)입니다.
+                  - 사용자가 "최근 3개월", "올해" 등으로 물으면 snapshot_months 결과를 기준으로 기간을 설정하세요.
+                  - fromYymm/toYymm 형식: "YYYYMM" (예: "202501")
+
+                get_snapshot_months — 전표처리(확정)된 월 목록 조회
+                  args : {"fromYymm": <optional>, "toYymm": <optional>}
+                  반환 : {
+                    snapshotMonths: [YYYYMM, ...],  // 전표처리 완료된 달
+                    count, earliest, latest, currentMonth,
+                    note
+                  }
+                  언제 사용:
+                    - 기간 설정이 필요한 분석 질문을 받았을 때 먼저 호출
+                    - "전표처리된 달이 있어?", "확정 데이터 알려줘"
+
+                get_cost_center_status — 수지계정현황 조회 (기간별 수입/지출 분석)
+                  args : {"fromYymm": <YYYYMM, optional, default 이번달>, "toYymm": <YYYYMM, optional, default 이번달>}
+                  반환 : {
+                    period: {fromYymm, toYymm},
+                    dataSource: {
+                      snapshotMonths: [...],   // 이 달들은 전표처리 확정 데이터
+                      liveMonths:     [...],   // 이 달들은 실시간(미확정) 데이터
+                      note: 데이터 혼재 여부 설명
+                    },
+                    summary: {totalIncome, totalExpense, balance, expenseRatePct, costCenterCount},
+                    costCenters: [{ccSeq, name, type, income, expense, balance, expenseSharePct}],
+                    topExpenseCenters: [...상위5개...],
+                    negativeBalanceCenters: [...적자 센터...]
+                  }
+                  언제 사용: "수지계정", "수입/지출 현황", "어디서 돈 많이 써?", "생활비 분석", "센터별 수지"
+                  분석 지침:
+                    - balance < 0 인 센터는 적자 → 지출 조정 필요성 언급
+                    - snapshotMonths/liveMonths 를 구분해서 사용자에게 데이터 신뢰도를 설명할 것
+                    - 기간이 명확하지 않으면 get_snapshot_months 먼저 호출해 최신 확정 월 파악
+
+                get_asset_change_history — 자산변동현황 조회 (월별 자산 추이)
+                  args : {"fromYymm": <YYYYMM, optional>, "toYymm": <YYYYMM, optional>}
+                  반환 : {
+                    note: 데이터 특성 설명,
+                    dataSource: "snapshot",   // 항상 전표처리 확정 데이터
+                    totalMonths,
+                    latestMonth: {hstYymm, totalAsset, totalLoan, netAsset, liquidAsset, fixedAsset},
+                    movementSummary: {averageMomChange, positiveMonths, negativeMonths},
+                    monthlyTrend: [{
+                      hstYymm, dataSource:"snapshot",
+                      totalAsset, totalLoan, netAsset, liquidAsset, fixedAsset,
+                      monthlyIncome, monthlyExpense, momNetAsset (전월 대비 순자산 증감)
+                    }]
+                  }
+                  언제 사용: "자산 변동", "월별 자산 추이", "순자산 증감", "자산 얼마나 늘었어?"
+                  분석 지침:
+                    - 이 tool은 전표처리된 달만 반환함. 전표처리 안 된 달은 결과에 없음.
+                    - momNetAsset > 0 이면 그달 순자산 증가, < 0 이면 감소
+                    - 특정 기간 분석 시 fromYymm/toYymm 으로 범위 좁혀 재호출 가능
 
                 ────────────────────────────────────────
                 ### [입금요청]
@@ -1021,6 +1423,66 @@ public class GeminiService {
             if (!text.isBlank()) return text;
         }
         return "";
+    }
+
+    /** YYYYMM 범위 내 월 목록 생성 */
+    private List<String> aiListMonths(String fromYymm, String toYymm) {
+        List<String> months = new ArrayList<>();
+        try {
+            LocalDate from = LocalDate.of(
+                    Integer.parseInt(fromYymm.substring(0, 4)),
+                    Integer.parseInt(fromYymm.substring(4, 6)), 1);
+            LocalDate to = LocalDate.of(
+                    Integer.parseInt(toYymm.substring(0, 4)),
+                    Integer.parseInt(toYymm.substring(4, 6)), 1);
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMM");
+            while (!from.isAfter(to)) {
+                months.add(from.format(fmt));
+                from = from.plusMonths(1);
+            }
+        } catch (Exception e) {
+            months.add(fromYymm);
+        }
+        return months;
+    }
+
+    /** 멀티월 수지계정 집계: 월별로 스냅샷 우선 */
+    private List<CostCenterStatusVO> aiBuildMultiMonthStatus(String familyId, List<String> months) {
+        Map<Long, CostCenterStatusVO> accumulated = new LinkedHashMap<>();
+        for (String ym : months) {
+            List<CostCenterStatusVO> monthData;
+            if (snapshotService.hasSnapshot(familyId, ym)) {
+                monthData = snapshotService.getCostCenterHst(familyId, ym);
+                for (CostCenterStatusVO s : monthData) {
+                    long inc = s.getIncomeMonthlyAmt()  != null ? s.getIncomeMonthlyAmt()  : 0L;
+                    long exp = s.getExpenseMonthlyAmt() != null ? s.getExpenseMonthlyAmt() : 0L;
+                    s.setTotalIncomeAmt(inc);
+                    s.setTotalExpenseAmt(exp);
+                }
+            } else {
+                monthData = costCenterService.getStatusList(familyId, ym, ym);
+            }
+            for (CostCenterStatusVO s : monthData) {
+                if (s.getCcSeq() == null) continue;
+                CostCenterStatusVO acc = accumulated.computeIfAbsent(s.getCcSeq(), k -> {
+                    CostCenterStatusVO v = new CostCenterStatusVO();
+                    v.setCcSeq(s.getCcSeq());
+                    v.setCcNm(s.getCcNm());
+                    v.setCcType(s.getCcType());
+                    v.setIncomePlanNm(s.getIncomePlanNm());
+                    v.setTotalIncomeAmt(0L);
+                    v.setTotalExpenseAmt(0L);
+                    return v;
+                });
+                acc.setTotalIncomeAmt(acc.getTotalIncomeAmt()
+                        + (s.getTotalIncomeAmt()  != null ? s.getTotalIncomeAmt()  : 0L));
+                acc.setTotalExpenseAmt(acc.getTotalExpenseAmt()
+                        + (s.getTotalExpenseAmt() != null ? s.getTotalExpenseAmt() : 0L));
+            }
+        }
+        List<CostCenterStatusVO> result = new ArrayList<>(accumulated.values());
+        result.forEach(s -> s.setBalance(s.getTotalIncomeAmt() - s.getTotalExpenseAmt()));
+        return result;
     }
 
     private Map<String, Object> confirmRequired(String message) {
