@@ -47,11 +47,8 @@ public class CashFlowServiceImpl implements CashFlowService {
             vo.setUpdId(userId);
             cashFlowMapper.updatePlan(vo);
         }
-        // 비용센터 자동 동기화
-        String ft = vo.getFlowType();
-        if ("EXPENSE".equals(ft) || "SAVING".equals(ft) || "INVEST".equals(ft)) {
-            costCenterService.syncFromExpensePlan(vo, userId);
-        } else if ("INCOME".equals(ft)) {
+        // 정기수입만 수지계정 자동 동기화
+        if ("INCOME".equals(vo.getFlowType())) {
             costCenterService.syncFromIncomePlan(vo, userId);
         }
     }
@@ -59,8 +56,6 @@ public class CashFlowServiceImpl implements CashFlowService {
     @Override
     @Transactional
     public void deletePlan(String familyId, Long planSeq, String userId) {
-        // 정기지출이면 연동된 AUTO 비용센터도 함께 삭제
-        costCenterService.deleteBySourcePlan(familyId, planSeq, userId);
         cashFlowMapper.deletePlan(familyId, planSeq, userId);
     }
 

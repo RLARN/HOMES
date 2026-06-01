@@ -203,6 +203,73 @@
       line-height: 1;
     }
     .send-btn:disabled { opacity: .55; }
+    .suggest-wrap {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 10px 14px 14px;
+      background: #fff;
+    }
+    .suggest-wrap.hidden {
+      animation: suggestFadeOut .22s ease forwards;
+    }
+    @keyframes suggestFadeOut {
+      to { opacity: 0; transform: translateY(6px); pointer-events: none; }
+    }
+    .suggest-header {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #9ca3af;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .suggest-header .material-symbols-rounded {
+      font-size: 14px;
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    .suggest-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .suggest-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px 7px 9px;
+      border-radius: 10px;
+      border: 1px solid rgba(17, 24, 39, .1);
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(16, 24, 40, .05);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color .18s, box-shadow .18s, transform .15s, background .18s;
+    }
+    .suggest-chip:hover {
+      border-color: rgba(37, 99, 235, .35);
+      background: #f8faff;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, .1);
+      transform: translateY(-1px);
+    }
+    .suggest-chip:active { transform: translateY(0); box-shadow: none; }
+    .suggest-chip .sc-icon {
+      font-family: 'Material Symbols Rounded';
+      font-size: 16px;
+      line-height: 1;
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+      color: #2563eb;
+      flex-shrink: 0;
+    }
+    .suggest-chip .sc-label {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #374151;
+      white-space: nowrap;
+    }
     @media (max-width: 767.98px) {
       .homes-main { padding: 0; }
       .chat-wrap { border-radius: 0; border-left: 0; border-right: 0; }
@@ -216,6 +283,10 @@
       body.keyboard-open .chat-input-bar { padding-bottom: 10px; }
       .chat-bubble { max-width: 82%; font-size: 13px; padding: 9px 12px; }
       .process-row { max-width: 82%; }
+      .suggest-wrap { gap: 6px; padding: 7px 11px 14px; }
+      .suggest-chip { padding: 6px 11px 6px 8px; }
+      .suggest-chip .sc-icon { font-size: 15px; }
+      .suggest-chip .sc-label { font-size: 12px; }
     }
   </style>
 </head>
@@ -239,6 +310,52 @@
           <div class="ai-row">
             <img class="ai-avatar" src="${pageContext.request.contextPath}/img/homesAI.png" alt="^HOMES AI">
             <div class="chat-bubble"><p>무엇이든 편하게 말해주세요. 조회, 결재, 삭제 같은 HOMES 업무도 처리할 수 있어요.</p></div>
+          </div>
+
+        </div>
+
+        <div class="suggest-wrap" id="suggestBar">
+          <div class="suggest-header">
+            <span class="material-symbols-rounded">auto_awesome</span>
+            추천 질문
+          </div>
+          <div class="suggest-grid">
+            <button class="suggest-chip" onclick="sendSuggest(this)" data-q="현재 자산 현황 알려줘">
+              <span class="sc-icon">account_balance</span>
+              <span class="sc-label">현재 자산 현황</span>
+            </button>
+            <button class="suggest-chip" onclick="sendSuggest(this)" data-q="이번 달 생활비 얼마나 썼어?">
+              <span class="sc-icon">receipt_long</span>
+              <span class="sc-label">이번 달 생활비</span>
+            </button>
+            <button class="suggest-chip" onclick="sendSuggest(this)" data-q="향후 12개월 자산 예측해줘">
+              <span class="sc-icon">trending_up</span>
+              <span class="sc-label">자산 예측</span>
+            </button>
+            <button class="suggest-chip" onclick="sendSuggest(this)" data-q="입금요청 목록 보여줘">
+              <span class="sc-icon">assignment</span>
+              <span class="sc-label">입금요청 목록</span>
+            </button>
+            <button class="suggest-chip" onclick="sendSuggest(this)" data-q="공유메모 목록 보여줘">
+              <span class="sc-icon">sticky_note_2</span>
+              <span class="sc-label">공유메모 목록</span>
+            </button>
+            <button class="suggest-chip" onclick="sendSuggest(this)" data-q="자산 유형별 구성 분석해줘">
+              <span class="sc-icon">donut_large</span>
+              <span class="sc-label">자산 유형 분석</span>
+            </button>
+            <button class="suggest-chip" onclick="sendSuggest(this)" data-q="정기 수입/지출 계획 전체 보여줘">
+              <span class="sc-icon">event_repeat</span>
+              <span class="sc-label">정기 계획 목록</span>
+            </button>
+            <button class="suggest-chip" onclick="sendSuggest(this)" data-q="대출 이자 부담 분석해줘">
+              <span class="sc-icon">percent</span>
+              <span class="sc-label">이자 부담 분석</span>
+            </button>
+            <button class="suggest-chip" onclick="sendSuggest(this)" data-q="종합 재정 분석: 자산 현황, 수지계정, 생활비, 대출 이자 부담을 모두 분석해서 개선 방향 제시해줘">
+              <span class="sc-icon">analytics</span>
+              <span class="sc-label">종합 재정 분석</span>
+            </button>
           </div>
         </div>
 
@@ -334,10 +451,27 @@
     }, 250);
   }
 
+  const suggestBar = document.getElementById('suggestBar');
+
+  function sendSuggest(btn) {
+    const text = btn.dataset.q || btn.textContent.trim();
+    hideSuggestBar();
+    inputEl.value = text;
+    inputEl.dispatchEvent(new Event('input'));
+    sendMessage();
+  }
+
+  function hideSuggestBar() {
+    if (!suggestBar || suggestBar.classList.contains('hidden')) return;
+    suggestBar.classList.add('hidden');
+    suggestBar.addEventListener('animationend', () => suggestBar.remove(), { once: true });
+  }
+
   async function sendMessage() {
     const text = inputEl.value.trim();
     if (!text || isProcessing) return;
 
+    hideSuggestBar();
     inputEl.value = '';
     inputEl.style.height = 'auto';
     isProcessing = true;
@@ -420,7 +554,12 @@
             insert_note: '공유메모 등록',
             update_note: '공유메모 수정',
             approve_deposit: '입금요청 결재',
-            delete_deposit: '입금요청 삭제'
+            delete_deposit: '입금요청 삭제',
+            list_cashflow_plans: '정기 계획 목록 조회',
+            get_asset_type_summary: '자산 유형별 구성 조회',
+            get_manual_cashflow_detail: '수기 현금흐름 상세 조회',
+            get_expense_list: '생활비 월별 집계 조회',
+            calc_loan_interest_burden: '대출 이자 부담 분석'
           };
           appendToolBadge(event.toolsUsed.map(t => names[t] || t).join(' · '));
         }
@@ -516,6 +655,8 @@
   }
 
   async function typeText(el, text) {
+    // 리터럴 \n → 실제 개행 변환
+    text = (text || '').replace(/\\n/g, '\n').replace(/\\t/g, '  ');
     el.textContent = '';
     const chunkSize = text.length > 400 ? 3 : 1;
     for (let i = 0; i < text.length; i += chunkSize) {
@@ -528,7 +669,9 @@
   }
 
   function renderMarkdown(el, text) {
-    const lines = escapeHtml(text || '').split('\n');
+    // 모델이 \n 을 리터럴로 출력한 경우 실제 개행으로 변환
+    text = (text || '').replace(/\\n/g, '\n').replace(/\\t/g, '  ');
+    const lines = escapeHtml(text).split('\n');
     let html = '';
     let inOl = false;
     let inUl = false;

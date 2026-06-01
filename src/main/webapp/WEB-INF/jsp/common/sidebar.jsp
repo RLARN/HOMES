@@ -46,8 +46,8 @@
           <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/dms">
             <span class="ms-icon material-symbols-rounded">folder_shared</span><span>공유드라이브</span>
           </a>
-          <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/calendar/google">
-            <span class="ms-icon material-symbols-rounded">calendar_month</span><span>구글 캘린더</span>
+          <a class="list-group-item list-group-item-action" href="">
+            <span class="ms-icon material-symbols-rounded">calendar_month</span><span>구글 캘린더</span><span class="badge bg-secondary ms-1" style="font-size:10px;">준비중</span>
           </a>
           <a class="list-group-item list-group-item-action" href="${pageContext.request.contextPath}/sns">
             <span class="ms-icon material-symbols-rounded">photo_library</span><span>가족 앨범</span>
