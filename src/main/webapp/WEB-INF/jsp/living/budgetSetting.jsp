@@ -75,105 +75,21 @@
         </div>
       </div>
 
-      <!-- 카테고리별 항목 테이블 -->
+      <!-- 카테고리별 항목 그리드 -->
       <div class="card homes-card">
         <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table align-middle homes-table mb-0" id="budgetTable">
-              <thead class="table-light">
-                <tr>
-                  <th style="width:140px;">카테고리</th>
-                  <th>항목명</th>
-                  <th style="width:140px;" class="text-end">예산금액</th>
-                  <th style="width:160px;">수입원</th>
-                  <th style="width:100px;" class="text-center">관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                <c:choose>
-                  <c:when test="${empty catList}">
-                    <tr>
-                      <td colspan="5" class="text-center text-muted py-5">
-                        카테고리가 없습니다. 위의 [+ 카테고리 추가]를 눌러 시작하세요.
-                      </td>
-                    </tr>
-                  </c:when>
-                  <c:otherwise>
-                    <c:forEach var="cat" items="${catList}">
-                      <!-- 카테고리 헤더 행 -->
-                      <tr class="table-secondary cat-row" data-cat-seq="${cat.catSeq}">
-                        <td colspan="2">
-                          <span class="fw-semibold" style="font-size:14px;">
-                            <span class="material-symbols-rounded ms-sm me-1" style="color:#f59e0b;">folder</span>${cat.catNm}
-                          </span>
-                          <button class="btn btn-sm btn-link py-0 px-1 text-muted"
-                                  onclick="openCatModal(${cat.catSeq}, '${cat.catNm}', ${cat.sortOrder})"
-                                  title="카테고리 수정"><span class="material-symbols-rounded ms-sm">edit</span></button>
-                          <button class="btn btn-sm btn-link py-0 px-1 text-danger"
-                                  onclick="deleteCat(${cat.catSeq})"
-                                  title="카테고리 삭제"><span class="material-symbols-rounded ms-sm">delete</span></button>
-                        </td>
-                        <td class="text-end fw-semibold text-primary">
-                          <fmt:formatNumber value="${cat.totalBudgetAmt}" pattern="#,##0"/> 원
-                        </td>
-                        <td></td>
-                        <td class="text-center">
-                          <button class="btn btn-sm btn-outline-primary homes-pill"
-                                  onclick="openItemModal(null, ${cat.catSeq}, '${cat.catNm}')">+ 항목</button>
-                        </td>
-                      </tr>
-                      <!-- 항목 행들 -->
-                      <c:choose>
-                        <c:when test="${empty cat.items}">
-                          <tr class="item-row" data-cat="${cat.catSeq}">
-                            <td class="text-muted ps-4" style="font-size:12px;">
-                              <span class="text-muted fst-italic">항목 없음</span>
-                            </td>
-                            <td colspan="4"></td>
-                          </tr>
-                        </c:when>
-                        <c:otherwise>
-                          <c:forEach var="item" items="${cat.items}">
-                            <tr class="item-row" data-cat="${cat.catSeq}">
-                              <td class="text-muted ps-4" style="font-size:12px;">└</td>
-                              <td>${item.itemNm}</td>
-                              <td class="text-end">
-                                <fmt:formatNumber value="${item.budgetAmt}" pattern="#,##0"/> 원
-                              </td>
-                              <td class="text-muted small">
-                                <c:choose>
-                                  <c:when test="${not empty item.ccNm}">
-                                    <span class="badge bg-light text-dark border">${item.ccNm}</span>
-                                  </c:when>
-                                  <c:otherwise><span class="text-muted">-</span></c:otherwise>
-                                </c:choose>
-                              </td>
-                              <td class="text-center">
-                                <button class="btn btn-sm btn-link p-0 text-muted me-1"
-                                        onclick="openItemModal(${item.itemSeq}, ${item.catSeq}, '${item.catNm}', '${item.itemNm}', ${item.budgetAmt}, ${empty item.ccSeq ? 'null' : item.ccSeq})"
-                                        title="수정"><span class="material-symbols-rounded ms-sm">edit</span></button>
-                                <button class="btn btn-sm btn-link p-0 text-danger"
-                                        onclick="deleteItem(${item.itemSeq})"
-                                        title="삭제"><span class="material-symbols-rounded ms-sm">delete</span></button>
-                              </td>
-                            </tr>
-                          </c:forEach>
-                        </c:otherwise>
-                      </c:choose>
-                    </c:forEach>
-                    <!-- 합계 행 -->
-                    <tr class="table-light fw-bold">
-                      <td colspan="2" class="text-end">월 예산 합계</td>
-                      <td class="text-end text-primary fs-6">
-                        <fmt:formatNumber value="${grandTotal}" pattern="#,##0"/> 원
-                      </td>
-                      <td colspan="2"></td>
-                    </tr>
-                  </c:otherwise>
-                </c:choose>
-              </tbody>
-            </table>
-          </div>
+          <c:choose>
+            <c:when test="${empty catList}">
+              <div class="text-center text-muted py-5">
+                카테고리가 없습니다. 위의 [+ 카테고리 추가]를 눌러 시작하세요.
+              </div>
+            </c:when>
+            <c:otherwise>
+              <div class="homes-ag-wrap">
+                <div id="budgetGrid" class="ag-theme-alpine"></div>
+              </div>
+            </c:otherwise>
+          </c:choose>
         </div>
       </div>
 
@@ -185,55 +101,18 @@
           <button class="btn btn-sm btn-outline-success homes-pill px-3" onclick="openIncomeModal(null)">+ 수입 추가</button>
         </div>
         <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table align-middle homes-table mb-0" id="incomeTable">
-              <thead class="table-light">
-                <tr>
-                  <th>수지계정</th>
-                  <th class="text-end">수입금액</th>
-                  <th>메모</th>
-                  <th style="width:80px;" class="text-center">관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                <c:choose>
-                  <c:when test="${empty incomeEntries}">
-                    <tr>
-                      <td colspan="4" class="text-center text-muted py-4 fst-italic">
-                        이달 등록된 수입이 없습니다. [+ 수입 추가]를 눌러 등록하세요.
-                      </td>
-                    </tr>
-                  </c:when>
-                  <c:otherwise>
-                    <c:forEach var="inc" items="${incomeEntries}">
-                      <tr>
-                        <td>${inc.ccNm}</td>
-                        <td class="text-end text-success fw-semibold">
-                          <fmt:formatNumber value="${inc.actualAmt}" pattern="#,##0"/> 원
-                        </td>
-                        <td class="text-muted small">${inc.memo}</td>
-                        <td class="text-center">
-                          <button class="btn btn-sm btn-link p-0 text-muted me-1"
-                                  onclick="openIncomeModal(${inc.incomeSeq}, ${inc.ccSeq}, '${inc.ccNm}', ${inc.actualAmt}, '${inc.memo}')"
-                                  title="수정"><span class="material-symbols-rounded ms-sm">edit</span></button>
-                          <button class="btn btn-sm btn-link p-0 text-danger"
-                                  onclick="deleteIncome(${inc.incomeSeq})"
-                                  title="삭제"><span class="material-symbols-rounded ms-sm">delete</span></button>
-                        </td>
-                      </tr>
-                    </c:forEach>
-                    <tr class="table-light fw-bold">
-                      <td class="text-end">합계</td>
-                      <td class="text-end text-success">
-                        <fmt:formatNumber value="${incomeEntryTotal}" pattern="#,##0"/> 원
-                      </td>
-                      <td colspan="2"></td>
-                    </tr>
-                  </c:otherwise>
-                </c:choose>
-              </tbody>
-            </table>
-          </div>
+          <c:choose>
+            <c:when test="${empty incomeEntries}">
+              <div class="text-center text-muted py-4 fst-italic px-3">
+                이달 등록된 수입이 없습니다. [+ 수입 추가]를 눌러 등록하세요.
+              </div>
+            </c:when>
+            <c:otherwise>
+              <div class="homes-ag-wrap">
+                <div id="incomeGrid" class="ag-theme-alpine"></div>
+              </div>
+            </c:otherwise>
+          </c:choose>
         </div>
       </div>
 
@@ -364,6 +243,200 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const ctx = '${pageContext.request.contextPath}';
+
+/* ── 예산 그리드 데이터 구성 ── */
+(function () {
+  function d(s) { const el = document.createElement('textarea'); el.innerHTML = s; return el.value; }
+  function won(v) { return Number(v || 0).toLocaleString('ko-KR') + ' 원'; }
+
+  const budgetRows = [];
+  <c:forEach var="cat" items="${catList}">
+  (function () {
+    budgetRows.push({
+      rowType: 'catHeader',
+      catSeq:        ${cat.catSeq},
+      catNm:         d('<c:out value="${cat.catNm}"/>'),
+      sortOrder:     ${cat.sortOrder},
+      totalBudgetAmt:${cat.totalBudgetAmt},
+    });
+    <c:choose>
+      <c:when test="${empty cat.items}">
+    budgetRows.push({ rowType: 'emptyItem', catSeq: ${cat.catSeq} });
+      </c:when>
+      <c:otherwise>
+        <c:forEach var="item" items="${cat.items}">
+    budgetRows.push({
+      rowType:   'item',
+      catSeq:    ${item.catSeq},
+      catNm:     d('<c:out value="${item.catNm}"/>'),
+      itemSeq:   ${item.itemSeq},
+      itemNm:    d('<c:out value="${item.itemNm}"/>'),
+      budgetAmt: ${item.budgetAmt},
+      ccSeq:     ${empty item.ccSeq ? 'null' : item.ccSeq},
+      ccNm:      d('<c:out value="${item.ccNm}"/>'),
+    });
+        </c:forEach>
+      </c:otherwise>
+    </c:choose>
+  })();
+  </c:forEach>
+  budgetRows.push({ rowType: 'grandTotal', totalBudgetAmt: ${grandTotal} });
+
+  if (document.getElementById('budgetGrid')) {
+    agGrid.createGrid(document.getElementById('budgetGrid'), {
+      columnDefs: [
+        { field: 'catNm', headerName: '카테고리', width: 170, minWidth: 120,
+          cellRenderer: p => {
+            if (p.data.rowType === 'catHeader') {
+              return '<span class="material-symbols-rounded ms-sm me-1" style="color:#f59e0b;vertical-align:-3px;">folder</span>' +
+                     '<strong>' + p.data.catNm + '</strong>';
+            }
+            if (p.data.rowType === 'emptyItem')  return '<span class="text-muted fst-italic ps-3" style="font-size:12px;">항목 없음</span>';
+            if (p.data.rowType === 'grandTotal')  return '';
+            return '<span class="text-muted ps-3" style="font-size:12px;">└</span>';
+          }
+        },
+        { field: 'itemNm', headerName: '항목명', flex: 1, minWidth: 120,
+          cellRenderer: p => {
+            if (p.data.rowType === 'item')       return p.data.itemNm;
+            if (p.data.rowType === 'grandTotal')  return '<span class="fw-bold">월 예산 합계</span>';
+            return '';
+          }
+        },
+        { field: 'budgetAmt', headerName: '예산금액', width: 140, type: 'rightAligned',
+          cellRenderer: p => {
+            if (p.data.rowType === 'catHeader')  return '<span class="fw-semibold text-primary">' + won(p.data.totalBudgetAmt) + '</span>';
+            if (p.data.rowType === 'item')       return won(p.value);
+            if (p.data.rowType === 'grandTotal') return '<span class="fw-bold text-primary fs-6">' + won(p.data.totalBudgetAmt) + '</span>';
+            return '';
+          }
+        },
+        { field: 'ccNm', headerName: '수입원', width: 160, minWidth: 120,
+          cellRenderer: p => {
+            if (p.data.rowType !== 'item') return '';
+            return p.data.ccNm
+              ? '<span class="badge bg-light text-dark border">' + p.data.ccNm + '</span>'
+              : '<span class="text-muted">-</span>';
+          }
+        },
+        { headerName: '관리', width: 120, sortable: false,
+          cellStyle: { justifyContent: 'center' },
+          cellRenderer: p => {
+            if (p.data.rowType === 'catHeader') {
+              const wrap = document.createElement('div');
+              wrap.className = 'd-flex align-items-center gap-1';
+
+              const editBtn = document.createElement('button');
+              editBtn.className = 'btn btn-sm btn-link py-0 px-1 text-muted';
+              editBtn.title = '카테고리 수정';
+              editBtn.innerHTML = '<span class="material-symbols-rounded ms-sm">edit</span>';
+              editBtn.onclick = () => openCatModal(p.data.catSeq, p.data.catNm, p.data.sortOrder);
+              wrap.appendChild(editBtn);
+
+              const delBtn = document.createElement('button');
+              delBtn.className = 'btn btn-sm btn-link py-0 px-1 text-danger';
+              delBtn.title = '카테고리 삭제';
+              delBtn.innerHTML = '<span class="material-symbols-rounded ms-sm">delete</span>';
+              delBtn.onclick = () => deleteCat(p.data.catSeq);
+              wrap.appendChild(delBtn);
+
+              const addBtn = document.createElement('button');
+              addBtn.className = 'btn btn-sm btn-outline-primary homes-pill px-2 py-0';
+              addBtn.style.fontSize = '12px';
+              addBtn.textContent = '+ 항목';
+              addBtn.onclick = () => openItemModal(null, p.data.catSeq, p.data.catNm);
+              wrap.appendChild(addBtn);
+
+              return wrap;
+            }
+            if (p.data.rowType === 'item') {
+              const wrap = document.createElement('div');
+              wrap.className = 'd-flex align-items-center justify-content-center gap-1';
+
+              const editBtn = document.createElement('button');
+              editBtn.className = 'btn btn-sm btn-link p-0 text-muted';
+              editBtn.title = '수정';
+              editBtn.innerHTML = '<span class="material-symbols-rounded ms-sm">edit</span>';
+              editBtn.onclick = () => openItemModal(p.data.itemSeq, p.data.catSeq, p.data.catNm, p.data.itemNm, p.data.budgetAmt, p.data.ccSeq);
+              wrap.appendChild(editBtn);
+
+              const delBtn = document.createElement('button');
+              delBtn.className = 'btn btn-sm btn-link p-0 text-danger';
+              delBtn.title = '삭제';
+              delBtn.innerHTML = '<span class="material-symbols-rounded ms-sm">delete</span>';
+              delBtn.onclick = () => deleteItem(p.data.itemSeq);
+              wrap.appendChild(delBtn);
+
+              return wrap;
+            }
+            return '';
+          }
+        },
+      ],
+      rowData: budgetRows,
+      defaultColDef: { sortable: false, resizable: true, suppressMovable: true },
+      domLayout: 'autoHeight',
+      suppressCellFocus: true,
+      getRowStyle: p => {
+        if (p.data.rowType === 'catHeader')  return { background: '#f3f4f6', fontWeight: 600 };
+        if (p.data.rowType === 'grandTotal') return { background: '#f8f9fa', fontWeight: 700 };
+        return {};
+      },
+    });
+  }
+
+  /* ── 이달 수입 그리드 ── */
+  const incomeRows = [];
+  <c:forEach var="inc" items="${incomeEntries}">
+  incomeRows.push({
+    incomeSeq: ${inc.incomeSeq},
+    ccSeq:     ${inc.ccSeq},
+    ccNm:      d('<c:out value="${inc.ccNm}"/>'),
+    actualAmt: ${inc.actualAmt},
+    memo:      d('<c:out value="${inc.memo}"/>'),
+  });
+  </c:forEach>
+
+  if (incomeRows.length && document.getElementById('incomeGrid')) {
+    agGrid.createGrid(document.getElementById('incomeGrid'), {
+      columnDefs: [
+        { field: 'ccNm',      headerName: '수지계정',  flex: 1, minWidth: 120 },
+        { field: 'actualAmt', headerName: '수입금액',  width: 140, type: 'rightAligned',
+          cellRenderer: p => '<span class="text-success fw-semibold">' + Number(p.value).toLocaleString('ko-KR') + ' 원</span>' },
+        { field: 'memo',      headerName: '메모',       flex: 1, minWidth: 100, cellClass: 'text-muted' },
+        { headerName: '관리', width: 80, sortable: false,
+          cellStyle: { justifyContent: 'center' },
+          cellRenderer: p => {
+            const wrap = document.createElement('div');
+            wrap.className = 'd-flex align-items-center justify-content-center gap-1';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-sm btn-link p-0 text-muted';
+            editBtn.title = '수정';
+            editBtn.innerHTML = '<span class="material-symbols-rounded ms-sm">edit</span>';
+            editBtn.onclick = () => openIncomeModal(p.data.incomeSeq, p.data.ccSeq, p.data.ccNm, p.data.actualAmt, p.data.memo);
+            wrap.appendChild(editBtn);
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn btn-sm btn-link p-0 text-danger';
+            delBtn.title = '삭제';
+            delBtn.innerHTML = '<span class="material-symbols-rounded ms-sm">delete</span>';
+            delBtn.onclick = () => deleteIncome(p.data.incomeSeq);
+            wrap.appendChild(delBtn);
+
+            return wrap;
+          }
+        },
+      ],
+      rowData: incomeRows,
+      defaultColDef: { sortable: false, resizable: true, suppressMovable: true },
+      domLayout: 'autoHeight',
+      suppressCellFocus: true,
+      pinnedBottomRowData: [{ ccNm: '합계', actualAmt: ${incomeEntryTotal}, _isTotal: true }],
+      getRowStyle: p => p.node.rowPinned ? { background: '#f8f9fa', fontWeight: 700 } : {},
+    });
+  }
+})();
 const catModal    = new bootstrap.Modal(document.getElementById('catModal'));
 const itemModal   = new bootstrap.Modal(document.getElementById('itemModal'));
 const incomeModal = new bootstrap.Modal(document.getElementById('incomeModal'));

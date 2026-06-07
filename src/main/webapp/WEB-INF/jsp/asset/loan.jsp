@@ -88,99 +88,17 @@
 
       <!-- 대출 목록 -->
       <div class="card homes-card">
-        <div class="card-body pt-2 px-3 px-md-4">
-          <div class="table-responsive">
-            <table class="table align-middle homes-table">
-              <thead>
-                <tr class="text-muted small">
-                  <th>대출명</th>
-                  <th style="width:140px;" class="text-nowrap text-end">최초금액</th>
-                  <th style="width:140px;" class="text-nowrap text-end">현재잔액</th>
-                  <th style="width:70px;"  class="text-nowrap text-center">금리</th>
-                  <th style="width:70px;"  class="text-nowrap text-center">기간</th>
-                  <th style="width:100px;" class="text-nowrap">시작일</th>
-                  <th style="width:100px;" class="text-nowrap">종료일</th>
-                  <th style="width:80px;"  class="text-nowrap text-center">상태</th>
-                  <th style="width:100px;" class="text-nowrap">수정자</th>
-                  <th style="width:110px;" class="text-nowrap">수정일</th>
-                  <th style="width:80px;"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <c:choose>
-                  <c:when test="${empty loanList}">
-                    <tr>
-                      <td colspan="11">
-                        <div class="homes-empty">등록된 대출이 없습니다.</div>
-                      </td>
-                    </tr>
-                  </c:when>
-                  <c:otherwise>
-                    <c:forEach var="l" items="${loanList}">
-                      <tr onclick="HOMES.go('${pageContext.request.contextPath}/asset/loan/form?loanSeq=${l.loanSeq}')"
-                          style="cursor:pointer;">
-                        <td>
-                          <div class="fw-semibold text-truncate" style="max-width:240px;">
-                            <c:out value="${l.loanNm}"/>
-                          </div>
-                          <c:if test="${not empty l.memo}">
-                            <div class="text-muted small text-truncate" style="max-width:240px;">
-                              <c:out value="${l.memo}"/>
-                            </div>
-                          </c:if>
-                        </td>
-                        <td class="text-end text-nowrap">
-                          <fmt:formatNumber value="${l.loanAmount}" pattern="#,##0"/> 원
-                        </td>
-                        <td class="text-end text-nowrap fw-semibold text-danger">
-                          <fmt:formatNumber value="${l.currentBalance}" pattern="#,##0"/> 원
-                        </td>
-                        <td class="text-center text-nowrap">
-                          <c:choose>
-                            <c:when test="${not empty l.interestRate}">
-                              <fmt:formatNumber value="${l.interestRate}" pattern="#,##0.##"/>%
-                            </c:when>
-                            <c:otherwise>-</c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td class="text-center text-nowrap">
-                          <c:choose>
-                            <c:when test="${not empty l.loanMonths}">${l.loanMonths}개월</c:when>
-                            <c:otherwise>-</c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td class="text-muted small text-nowrap">${l.startYmd}</td>
-                        <td class="text-muted small text-nowrap">${l.endYmd}</td>
-                        <td class="text-center text-nowrap">
-                          <c:choose>
-                            <c:when test="${l.closeYn == 'Y'}">
-                              <span class="badge bg-warning-subtle text-warning">완납/종료</span>
-                            </c:when>
-                            <c:otherwise>
-                              <span class="badge bg-danger-subtle text-danger">상환중</span>
-                            </c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td class="text-nowrap small"><c:out value="${l.updId}"/></td>
-                        <td class="text-muted text-nowrap small">${l.updDtStr}</td>
-                        <td class="text-nowrap" onclick="event.stopPropagation();">
-                          <a href="${pageContext.request.contextPath}/asset/loan/form?loanSeq=${l.loanSeq}"
-                             class="btn btn-xs btn-outline-primary homes-pill px-2 py-0" style="font-size:12px;">수정</a>
-                          <c:if test="${sessionScope.LoginVO.userAuth == 'manager'}">
-                            <button type="button"
-                                    class="btn btn-xs btn-outline-danger homes-pill px-2 py-0"
-                                    style="font-size:12px;"
-                                    data-loan-seq="${l.loanSeq}"
-                                    onclick="deleteLoan(this)">삭제</button>
-                          </c:if>
-                        </td>
-                      </tr>
-                    </c:forEach>
-                  </c:otherwise>
-                </c:choose>
-              </tbody>
-            </table>
-          </div>
+        <div class="card-body p-0">
+          <c:choose>
+            <c:when test="${empty loanList}">
+              <div class="homes-empty">등록된 대출이 없습니다.</div>
+            </c:when>
+            <c:otherwise>
+              <div class="homes-ag-wrap">
+                <div id="loanGrid" class="ag-theme-alpine"></div>
+              </div>
+            </c:otherwise>
+          </c:choose>
         </div>
       </div>
 
@@ -203,6 +121,86 @@
 <script>
 window.HOMES = window.HOMES || {};
 HOMES.ctx = '${pageContext.request.contextPath}';
+const isManager = '${sessionScope.LoginVO.userAuth}' === 'manager';
+
+(function () {
+  function d(s) { const el = document.createElement('textarea'); el.innerHTML = s; return el.value; }
+  function won(v) { return Number(v).toLocaleString('ko-KR') + ' 원'; }
+
+  const rowData = [];
+  <c:forEach var="l" items="${loanList}">
+  rowData.push({
+    loanSeq:        ${l.loanSeq},
+    loanNm:         d('<c:out value="${l.loanNm}"/>'),
+    memo:           d('<c:out value="${l.memo}"/>'),
+    loanAmount:     ${l.loanAmount},
+    currentBalance: ${l.currentBalance},
+    interestRate:   '${l.interestRate}',
+    loanMonths:     '${l.loanMonths}',
+    startYmd:       '${l.startYmd}',
+    endYmd:         '${l.endYmd}',
+    closeYn:        '${l.closeYn}',
+    updId:          d('<c:out value="${l.updId}"/>'),
+    updDtStr:       '${l.updDtStr}',
+  });
+  </c:forEach>
+
+  if (!rowData.length) return;
+
+  agGrid.createGrid(document.getElementById('loanGrid'), {
+    columnDefs: [
+      { field: 'loanNm', headerName: '대출명', flex: 1, minWidth: 160,
+        cellRenderer: p => {
+          const memo = p.data.memo ? '<div class="text-muted" style="font-size:11px;">' + p.data.memo + '</div>' : '';
+          return '<div><div class="fw-semibold">' + p.data.loanNm + '</div>' + memo + '</div>';
+        }, autoHeight: true },
+      { field: 'loanAmount',     headerName: '최초금액',   width: 140, type: 'rightAligned',
+        valueFormatter: p => won(p.value) },
+      { field: 'currentBalance', headerName: '현재잔액',   width: 140, type: 'rightAligned',
+        cellRenderer: p => '<span class="fw-semibold text-danger">' + won(p.value) + '</span>' },
+      { field: 'interestRate', headerName: '금리', width: 75,
+        cellStyle: { justifyContent: 'center' },
+        valueFormatter: p => p.value ? Number(p.value).toFixed(2).replace(/\.?0+$/, '') + '%' : '-' },
+      { field: 'loanMonths', headerName: '기간', width: 75,
+        cellStyle: { justifyContent: 'center' },
+        valueFormatter: p => p.value ? p.value + '개월' : '-' },
+      { field: 'startYmd', headerName: '시작일', width: 105, cellClass: 'text-muted' },
+      { field: 'endYmd',   headerName: '종료일', width: 105, cellClass: 'text-muted' },
+      { field: 'closeYn',  headerName: '상태',   width: 90,
+        cellStyle: { justifyContent: 'center' },
+        cellRenderer: p => p.value === 'Y'
+          ? '<span class="badge bg-warning-subtle text-warning">완납/종료</span>'
+          : '<span class="badge bg-danger-subtle text-danger">상환중</span>' },
+      { field: 'updId',    headerName: '수정자', width: 90 },
+      { field: 'updDtStr', headerName: '수정일', width: 115, cellClass: 'text-muted' },
+      { headerName: '', width: isManager ? 110 : 65, sortable: false,
+        cellRenderer: p => {
+          const el = document.createElement('div');
+          el.className = 'd-flex gap-1';
+          el.innerHTML = '<a href="' + HOMES.ctx + '/asset/loan/form?loanSeq=' + p.data.loanSeq + '"' +
+            ' class="btn btn-xs btn-outline-primary homes-pill px-2 py-0" style="font-size:12px;"' +
+            ' onclick="event.stopPropagation()">수정</a>';
+          if (isManager) {
+            const del = document.createElement('button');
+            del.className = 'btn btn-xs btn-outline-danger homes-pill px-2 py-0';
+            del.style.fontSize = '12px';
+            del.textContent = '삭제';
+            del.setAttribute('data-loan-seq', p.data.loanSeq);
+            del.addEventListener('click', e => { e.stopPropagation(); deleteLoan(del); });
+            el.appendChild(del);
+          }
+          return el;
+        }
+      },
+    ],
+    rowData,
+    defaultColDef: { sortable: true, resizable: true, suppressMovable: true },
+    domLayout: 'autoHeight',
+    suppressCellFocus: true,
+    getRowStyle: () => ({ cursor: 'pointer' }),
+    onRowClicked: p => HOMES.go(HOMES.ctx + '/asset/loan/form?loanSeq=' + p.data.loanSeq),
+  });
+})();
 
 (function () {
   const toastEl = document.getElementById('appToast');

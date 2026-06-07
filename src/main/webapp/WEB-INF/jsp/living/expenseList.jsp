@@ -46,85 +46,19 @@
       <!-- 월별 목록 -->
       <div class="card homes-card">
         <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table align-middle homes-table mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th style="width:120px;">년월</th>
-                  <th class="text-end">예산</th>
-                  <th class="text-end">실제 지출</th>
-                  <th class="text-end">잔액(예산-실제)</th>
-                  <th style="width:60px;" class="text-center">달성률</th>
-                  <th style="width:80px;" class="text-center">관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                <c:choose>
-                  <c:when test="${empty expenseList}">
-                    <tr>
-                      <td colspan="6" class="text-center text-muted py-5">
-                        등록된 내역이 없습니다.<br>
-                        <button class="btn btn-sm btn-primary homes-pill mt-2" onclick="openThisMonth()">이번달 입력 시작</button>
-                      </td>
-                    </tr>
-                  </c:when>
-                  <c:otherwise>
-                    <c:forEach var="exp" items="${expenseList}">
-                      <c:set var="remain" value="${exp.totalBudgetAmt - exp.totalActualAmt}"/>
-                      <c:set var="pct"    value="${exp.totalBudgetAmt > 0 ? (exp.totalActualAmt * 100 / exp.totalBudgetAmt) : 0}"/>
-                      <c:set var="isThis" value="${exp.expYymm == thisMonth}"/>
-                      <tr class="${isThis ? 'table-primary' : ''}"
-                          style="cursor:pointer;"
-                          onclick="HOMES.go('${pageContext.request.contextPath}/living/expense/${exp.expYymm}')">
-                        <td>
-                          <span class="fw-semibold">
-                            ${exp.expYymm.substring(0,4)}년 ${exp.expYymm.substring(4,6)}월
-                          </span>
-                          <c:if test="${isThis}">
-                            <span class="badge bg-primary ms-1" style="font-size:10px;">이번달</span>
-                          </c:if>
-                        </td>
-                        <td class="text-end text-muted">
-                          <fmt:formatNumber value="${exp.totalBudgetAmt}" pattern="#,##0"/> 원
-                        </td>
-                        <td class="text-end fw-semibold">
-                          <fmt:formatNumber value="${exp.totalActualAmt}" pattern="#,##0"/> 원
-                        </td>
-                        <td class="text-end">
-                          <c:choose>
-                            <c:when test="${remain >= 0}">
-                              <span class="text-success fw-semibold">
-                                <fmt:formatNumber value="${remain}" pattern="#,##0"/> 원
-                              </span>
-                            </c:when>
-                            <c:otherwise>
-                              <span class="text-danger fw-semibold">
-                                -<fmt:formatNumber value="${-remain}" pattern="#,##0"/> 원
-                              </span>
-                            </c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td class="text-center">
-                          <div class="d-flex align-items-center gap-1 justify-content-center">
-                            <div class="progress flex-grow-1" style="height:6px; min-width:50px;">
-                              <div class="progress-bar ${pct > 100 ? 'bg-danger' : 'bg-primary'}"
-                                   style="width:${pct > 100 ? 100 : pct}%"></div>
-                            </div>
-                            <small class="${pct > 100 ? 'text-danger' : 'text-muted'}">${pct}%</small>
-                          </div>
-                        </td>
-                        <td class="text-center">
-                          <a class="btn btn-sm btn-outline-primary homes-pill"
-                             href="${pageContext.request.contextPath}/living/expense/${exp.expYymm}"
-                             onclick="event.stopPropagation()">입력</a>
-                        </td>
-                      </tr>
-                    </c:forEach>
-                  </c:otherwise>
-                </c:choose>
-              </tbody>
-            </table>
-          </div>
+          <c:choose>
+            <c:when test="${empty expenseList}">
+              <div class="text-center text-muted py-5">
+                등록된 내역이 없습니다.<br>
+                <button class="btn btn-sm btn-primary homes-pill mt-2" onclick="openThisMonth()">이번달 입력 시작</button>
+              </div>
+            </c:when>
+            <c:otherwise>
+              <div class="homes-ag-wrap">
+                <div id="expListGrid" class="ag-theme-alpine"></div>
+              </div>
+            </c:otherwise>
+          </c:choose>
         </div>
       </div>
 
@@ -138,16 +72,85 @@
 const ctx       = '${pageContext.request.contextPath}';
 const thisMonth = '${thisMonth}';
 
-function openThisMonth() {
-  location.href = ctx + '/living/expense/' + thisMonth;
+function openThisMonth() { location.href = ctx + '/living/expense/' + thisMonth; }
+function goToMonth() {
+  const val = document.getElementById('monthPicker').value;
+  if (!val) return;
+  location.href = ctx + '/living/expense/' + val.replace('-', '');
 }
 
-function goToMonth() {
-  const val = document.getElementById('monthPicker').value; // YYYY-MM
-  if (!val) return;
-  const yymm = val.replace('-', '');
-  location.href = ctx + '/living/expense/' + yymm;
-}
+(function () {
+  const rowData = [];
+  <c:forEach var="exp" items="${expenseList}">
+  rowData.push({
+    expYymm:       '${exp.expYymm}',
+    label:         '${exp.expYymm.substring(0,4)}년 ${exp.expYymm.substring(4,6)}월',
+    isThis:        ${exp.expYymm == thisMonth},
+    totalBudgetAmt:  ${exp.totalBudgetAmt},
+    totalActualAmt:  ${exp.totalActualAmt},
+    remain:          ${exp.totalBudgetAmt - exp.totalActualAmt},
+    pct:             ${exp.totalBudgetAmt > 0 ? (exp.totalActualAmt * 100 / exp.totalBudgetAmt) : 0},
+  });
+  </c:forEach>
+
+  if (!rowData.length) return;
+
+  function won(v) { return Number(v).toLocaleString('ko-KR') + ' 원'; }
+
+  agGrid.createGrid(document.getElementById('expListGrid'), {
+    columnDefs: [
+      { field: 'label', headerName: '년월', width: 160, minWidth: 120,
+        cellRenderer: p => {
+          const badge = p.data.isThis ? ' <span class="badge bg-primary ms-1" style="font-size:10px;">이번달</span>' : '';
+          return '<span class="fw-semibold">' + p.data.label + '</span>' + badge;
+        }
+      },
+      { field: 'totalBudgetAmt', headerName: '예산', type: 'rightAligned', minWidth: 120,
+        valueFormatter: p => won(p.value), cellClass: 'text-muted' },
+      { field: 'totalActualAmt', headerName: '실제 지출', type: 'rightAligned', minWidth: 120,
+        cellRenderer: p => '<span class="fw-semibold">' + won(p.value) + '</span>' },
+      { field: 'remain', headerName: '잔액', type: 'rightAligned', minWidth: 120,
+        cellRenderer: p => {
+          const r = p.value;
+          const cls = r >= 0 ? 'text-success' : 'text-danger';
+          const sign = r < 0 ? '-' : '';
+          return '<span class="fw-semibold ' + cls + '">' + sign + won(Math.abs(r)) + '</span>';
+        }
+      },
+      { field: 'pct', headerName: '달성률', width: 130, minWidth: 100,
+        cellRenderer: p => {
+          const pct = Math.round(p.value);
+          const w   = Math.min(pct, 100);
+          const cls = pct > 100 ? 'bg-danger' : 'bg-primary';
+          const tc  = pct > 100 ? 'text-danger' : 'text-muted';
+          return '<div class="d-flex align-items-center gap-1 w-100">' +
+            '<div class="progress flex-grow-1" style="height:6px;">' +
+            '<div class="progress-bar ' + cls + '" style="width:' + w + '%"></div></div>' +
+            '<small class="' + tc + '">' + pct + '%</small></div>';
+        }
+      },
+      { headerName: '관리', width: 80, sortable: false,
+        cellRenderer: p => {
+          const btn = document.createElement('a');
+          btn.className = 'btn btn-sm btn-outline-primary homes-pill';
+          btn.href = ctx + '/living/expense/' + p.data.expYymm;
+          btn.textContent = '입력';
+          btn.addEventListener('click', e => e.stopPropagation());
+          return btn;
+        }
+      },
+    ],
+    rowData,
+    defaultColDef: { sortable: true, resizable: true, suppressMovable: true },
+    domLayout: 'autoHeight',
+    suppressCellFocus: true,
+    getRowStyle: p => ({
+      cursor: 'pointer',
+      background: p.data.isThis ? '#eff6ff' : '',
+    }),
+    onRowClicked: p => HOMES.go(ctx + '/living/expense/' + p.data.expYymm),
+  });
+})();
 </script>
 </body>
 </html>

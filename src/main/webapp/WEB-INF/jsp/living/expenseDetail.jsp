@@ -136,126 +136,22 @@
         </div>
       </div>
 
-      <!-- 생활비 입력 테이블 -->
+      <!-- 생활비 입력 그리드 -->
       <div class="card homes-card">
         <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table align-middle homes-table mb-0" id="expenseTable">
-              <thead class="table-light">
-                <tr>
-                  <th style="width:130px;">카테고리</th>
-                  <th>항목</th>
-                  <th style="width:140px;" class="text-end">예산</th>
-                  <th style="width:150px;" class="text-end">실제 지출</th>
-                  <th style="width:130px;" class="text-end">잔액</th>
-                </tr>
-              </thead>
-              <tbody id="expTbody">
-
-              <%-- 카테고리별 그룹핑 렌더링 --%>
-              <c:set var="prevCatSeq" value=""/>
-              <c:set var="catBudgetSum" value="0"/>
-              <c:set var="catActualSum" value="0"/>
-
-              <c:forEach var="dtl" items="${dtlList}" varStatus="st">
-
-                <%-- 카테고리가 바뀌면 이전 소계 행 출력 --%>
-                <c:if test="${not empty prevCatSeq and prevCatSeq != dtl.catSeq}">
-                  <tr class="living-cat-row" id="catRow_${prevCatSeq}">
-                    <td colspan="2" class="text-end text-muted" style="font-size:12px;">소계</td>
-                    <td class="text-end cat-total-cell text-muted" id="catBudget_${prevCatSeq}">
-                      <fmt:formatNumber value="${catBudgetSum}" pattern="#,##0"/>
-                    </td>
-                    <td class="text-end cat-total-cell text-primary" id="catActual_${prevCatSeq}">
-                      <fmt:formatNumber value="${catActualSum}" pattern="#,##0"/>
-                    </td>
-                    <td class="text-end cat-total-cell" id="catRemain_${prevCatSeq}">-</td>
-                  </tr>
-                  <c:set var="catBudgetSum" value="0"/>
-                  <c:set var="catActualSum" value="0"/>
-                </c:if>
-
-                <%-- 카테고리 헤더 행 --%>
-                <c:if test="${prevCatSeq != dtl.catSeq}">
-                  <tr class="living-cat-row">
-                    <td colspan="5">
-                      <span class="material-symbols-rounded ms-sm me-1" style="color:#f59e0b;">folder</span><strong>${dtl.catNm}</strong>
-                    </td>
-                  </tr>
-                  <c:set var="prevCatSeq" value="${dtl.catSeq}"/>
-                </c:if>
-
-                <%-- 항목 행 --%>
-                <c:set var="catBudgetSum" value="${catBudgetSum + dtl.budgetAmt}"/>
-                <c:set var="catActualSum" value="${catActualSum + dtl.actualAmt}"/>
-                <tr class="living-item-row" data-item-seq="${dtl.itemSeq}"
-                    data-cat-seq="${dtl.catSeq}"
-                    data-budget="${dtl.budgetAmt}">
-                  <td class="text-muted ps-4" style="font-size:12px;">└</td>
-                  <td>${dtl.itemNm}</td>
-                  <td class="text-end text-muted budget-cell">
-                    <fmt:formatNumber value="${dtl.budgetAmt}" pattern="#,##0"/>
-                  </td>
-                  <td class="text-end">
-                    <input type="text"
-                           class="amt-input actual-input"
-                           data-item-seq="${dtl.itemSeq}"
-                           data-exp-seq="${mst.expSeq}"
-                           data-budget="${dtl.budgetAmt}"
-                           value="<fmt:formatNumber value="${dtl.actualAmt}" pattern="#,##0"/>"
-                           onInput="onAmtInput(this)"
-                           onBlur="autoSave(this)"
-                           onFocus="this.select()"/>
-                  </td>
-                  <td class="text-end remain-cell" id="remain_${dtl.itemSeq}">-</td>
-                </tr>
-
-                <%-- 마지막 항목이면 소계 출력 --%>
-                <c:if test="${st.last}">
-                  <tr class="living-cat-row" id="catRow_${dtl.catSeq}">
-                    <td colspan="2" class="text-end text-muted" style="font-size:12px;">소계</td>
-                    <td class="text-end cat-total-cell text-muted" id="catBudget_${dtl.catSeq}">
-                      <fmt:formatNumber value="${catBudgetSum}" pattern="#,##0"/>
-                    </td>
-                    <td class="text-end cat-total-cell text-primary" id="catActual_${dtl.catSeq}">
-                      <fmt:formatNumber value="${catActualSum}" pattern="#,##0"/>
-                    </td>
-                    <td class="text-end cat-total-cell" id="catRemain_${dtl.catSeq}">-</td>
-                  </tr>
-                </c:if>
-
-              </c:forEach>
-
-              <c:if test="${empty dtlList}">
-                <tr>
-                  <td colspan="5" class="text-center text-muted py-5">
-                    기준정보에 등록된 항목이 없습니다.<br>
-                    <a href="${pageContext.request.contextPath}/living/budget" class="btn btn-sm btn-primary mt-2">기준정보설정 →</a>
-                  </td>
-                </tr>
-              </c:if>
-
-              </tbody>
-
-              <!-- 합계 행 -->
-              <tfoot>
-                <tr class="grand-total-row">
-                  <td colspan="2" class="text-end">합 계</td>
-                  <td class="text-end text-muted" id="footBudget">
-                    <fmt:formatNumber value="${totalBudget}" pattern="#,##0"/>
-                  </td>
-                  <td class="text-end text-danger" id="footActual">
-                    <fmt:formatNumber value="${totalActual}" pattern="#,##0"/>
-                  </td>
-                  <td class="text-end" id="footRemain">-</td>
-                </tr>
-                <tr class="remain-row">
-                  <td colspan="2" class="text-end" style="font-size:13px;">나머지 (예산 - 실제)</td>
-                  <td colspan="3" class="text-end" id="footRemainLarge">-</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <c:choose>
+            <c:when test="${empty dtlList}">
+              <div class="text-center text-muted py-5">
+                기준정보에 등록된 항목이 없습니다.<br>
+                <a href="${pageContext.request.contextPath}/living/budget" class="btn btn-sm btn-primary mt-2">기준정보설정 →</a>
+              </div>
+            </c:when>
+            <c:otherwise>
+              <div class="homes-ag-wrap">
+                <div id="expDtlGrid" class="ag-theme-alpine"></div>
+              </div>
+            </c:otherwise>
+          </c:choose>
         </div>
       </div>
 
@@ -275,139 +171,231 @@
 const ctx    = '${pageContext.request.contextPath}';
 const expSeq = ${mst.expSeq};
 
-/* ── 숫자 유틸 ── */
-function parseN(s) {
-  return parseInt((s || '').replace(/[^0-9]/g, '') || '0', 10);
-}
-function fmtN(n) {
-  return Number(n).toLocaleString('ko-KR');
-}
+/* ── AG Grid 데이터 구축 ── */
+(function () {
+  function d(s) { const el = document.createElement('textarea'); el.innerHTML = s; return el.value; }
 
-/* ── 입력 이벤트: 콤마 포맷 + 잔액 실시간 갱신 ── */
-function onAmtInput(el) {
-  const raw = el.value.replace(/[^0-9]/g, '');
-  el.value  = raw ? fmtN(raw) : '';
-  el.classList.remove('saved');
-  updateRowRemain(el);
-  updateSummary();
-}
-
-/* 행 잔액 갱신 */
-function updateRowRemain(el) {
-  const budget = parseInt(el.dataset.budget || '0');
-  const actual = parseN(el.value);
-  const remain = budget - actual;
-  const itemSeq = el.dataset.itemSeq;
-  const cell = document.getElementById('remain_' + itemSeq);
-  if (!cell) return;
-  if (budget === 0) { cell.textContent = '-'; return; }
-  cell.textContent = fmtN(Math.abs(remain));
-  cell.className   = 'text-end remain-cell fw-semibold ' + (remain >= 0 ? 'text-success' : 'text-danger');
-}
-
-/* 카테고리 소계 갱신 */
-function updateCatTotals() {
-  const catMap = {};
-  document.querySelectorAll('.living-item-row').forEach(row => {
-    const catSeq  = row.dataset.catSeq;
-    const budget  = parseInt(row.dataset.budget || '0');
-    const input   = row.querySelector('.actual-input');
-    const actual  = input ? parseN(input.value) : 0;
-    if (!catMap[catSeq]) catMap[catSeq] = {budget: 0, actual: 0};
-    catMap[catSeq].budget += budget;
-    catMap[catSeq].actual += actual;
+  /* 원본 항목 데이터 */
+  const items = [];
+  <c:forEach var="dtl" items="${dtlList}">
+  items.push({
+    itemSeq:   ${dtl.itemSeq},
+    catSeq:    ${dtl.catSeq},
+    catNm:     d('<c:out value="${dtl.catNm}"/>'),
+    itemNm:    d('<c:out value="${dtl.itemNm}"/>'),
+    budgetAmt: ${dtl.budgetAmt},
+    actualAmt: ${dtl.actualAmt},
   });
-  for (const [catSeq, vals] of Object.entries(catMap)) {
-    const bCell = document.getElementById('catBudget_' + catSeq);
-    const aCell = document.getElementById('catActual_' + catSeq);
-    const rCell = document.getElementById('catRemain_' + catSeq);
-    if (bCell) bCell.textContent = fmtN(vals.budget);
-    if (aCell) aCell.textContent = fmtN(vals.actual);
-    if (rCell) {
-      const r = vals.budget - vals.actual;
-      rCell.textContent = fmtN(Math.abs(r));
-      rCell.className   = 'text-end cat-total-cell fw-semibold ' + (r >= 0 ? 'text-success' : 'text-danger');
+  </c:forEach>
+
+  if (!items.length) return;
+
+  /* 카테고리별 그룹핑 → 행 데이터 구성 */
+  const rowData = [];
+  let prevCat = null;
+  const catGroups = {};
+
+  items.forEach(item => {
+    if (item.catSeq !== prevCat) {
+      if (prevCat !== null) {
+        rowData.push({ rowType: 'catSubtotal', catSeq: prevCat, catNm: catGroups[prevCat].catNm });
+      }
+      rowData.push({ rowType: 'catHeader', catSeq: item.catSeq, catNm: item.catNm });
+      catGroups[item.catSeq] = { catNm: item.catNm, budgetSum: 0, actualSum: 0 };
+      prevCat = item.catSeq;
     }
-  }
-}
-
-/* 전체 요약 갱신 */
-function updateSummary() {
-  let totalBudget = 0, totalActual = 0;
-  document.querySelectorAll('.actual-input').forEach(inp => {
-    totalBudget += parseInt(inp.dataset.budget || '0');
-    totalActual += parseN(inp.value);
+    catGroups[item.catSeq].budgetSum += item.budgetAmt;
+    catGroups[item.catSeq].actualSum += item.actualAmt;
+    rowData.push({ rowType: 'item', ...item });
   });
-  const remain = totalBudget - totalActual;
-  const pct    = totalBudget > 0 ? Math.round(totalActual * 100 / totalBudget) : 0;
+  if (prevCat !== null) {
+    rowData.push({ rowType: 'catSubtotal', catSeq: prevCat, catNm: catGroups[prevCat].catNm });
+  }
+  rowData.push({ rowType: 'grandTotal' });
+  rowData.push({ rowType: 'remain' });
 
-  document.getElementById('summBudget').textContent  = fmtN(totalBudget) + ' 원';
-  document.getElementById('summActual').textContent  = fmtN(totalActual) + ' 원';
+  function fmtN(n) { return Number(n || 0).toLocaleString('ko-KR'); }
+  function parseN(s) { return parseInt((String(s) || '').replace(/[^0-9]/g, '') || '0', 10); }
 
-  const rEl = document.getElementById('summRemain');
-  rEl.textContent = fmtN(Math.abs(remain)) + ' 원';
-  rEl.className   = 'fw-bold fs-6 ' + (remain >= 0 ? 'text-success' : 'text-danger');
+  function recalc(api) {
+    let totalBudget = 0, totalActual = 0;
+    const catBudget = {}, catActual = {};
+    api.forEachNode(n => {
+      if (n.data.rowType !== 'item') return;
+      totalBudget += n.data.budgetAmt;
+      totalActual += n.data.actualAmt;
+      catBudget[n.data.catSeq] = (catBudget[n.data.catSeq] || 0) + n.data.budgetAmt;
+      catActual[n.data.catSeq] = (catActual[n.data.catSeq] || 0) + n.data.actualAmt;
+    });
+    const remain = totalBudget - totalActual;
+    const pct = totalBudget > 0 ? Math.round(totalActual * 100 / totalBudget) : 0;
 
-  document.getElementById('summPct').textContent = pct + '%';
-  const bar = document.getElementById('summBar');
-  bar.style.width = Math.min(pct, 100) + '%';
-  bar.className   = 'mini-progress-bar ' + (pct > 100 ? 'bg-danger' : 'bg-primary');
+    document.getElementById('summBudget').textContent  = fmtN(totalBudget) + ' 원';
+    document.getElementById('summActual').textContent  = fmtN(totalActual) + ' 원';
+    const rEl = document.getElementById('summRemain');
+    rEl.textContent = fmtN(Math.abs(remain)) + ' 원';
+    rEl.className = 'fw-bold fs-6 ' + (remain >= 0 ? 'text-success' : 'text-danger');
+    document.getElementById('summPct').textContent = pct + '%';
+    const bar = document.getElementById('summBar');
+    bar.style.width = Math.min(pct, 100) + '%';
+    bar.className = 'mini-progress-bar ' + (pct > 100 ? 'bg-danger' : 'bg-primary');
 
-  // 푸터
-  document.getElementById('footBudget').textContent = fmtN(totalBudget);
-  document.getElementById('footActual').textContent = fmtN(totalActual);
-  const fRemain = document.getElementById('footRemain');
-  fRemain.textContent = fmtN(Math.abs(remain));
-  fRemain.className   = 'text-end fw-bold ' + (remain >= 0 ? 'text-success' : 'text-danger');
+    // 하단 요약 행 갱신
+    api.forEachNode(n => {
+      if (n.data.rowType === 'catSubtotal') {
+        n.data._catBudget = catBudget[n.data.catSeq] || 0;
+        n.data._catActual = catActual[n.data.catSeq] || 0;
+      }
+      if (n.data.rowType === 'grandTotal') {
+        n.data._totalBudget = totalBudget;
+        n.data._totalActual = totalActual;
+      }
+      if (n.data.rowType === 'remain') {
+        n.data._remain = remain;
+      }
+    });
+    api.refreshCells({ force: true });
+  }
 
-  const frLarge = document.getElementById('footRemainLarge');
-  frLarge.textContent = (remain >= 0 ? '' : '-') + fmtN(Math.abs(remain)) + ' 원';
-  frLarge.className   = 'text-end ' + (remain >= 0 ? 'text-success' : 'text-danger');
+  function makeCellEditor(params) {
+    const value = { v: params.value };
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'amt-input';
+    input.style.cssText = 'width:100%;height:100%;border:1px solid #6366f1;border-radius:4px;padding:0 8px;font-size:13px;text-align:right;outline:none;';
+    input.value = fmtN(params.value);
+    input.addEventListener('input', () => {
+      const raw = input.value.replace(/[^0-9]/g, '');
+      input.value = raw ? fmtN(raw) : '';
+    });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault();
+        params.api.stopEditing();
+        const col = params.api.getAllGridColumns();
+        const rowIdx = params.rowIndex;
+        const nextRow = params.api.getDisplayedRowAtIndex(rowIdx + 1);
+        if (nextRow && nextRow.data.rowType === 'item') {
+          params.api.startEditingCell({ rowIndex: rowIdx + 1, colKey: 'actualAmt' });
+        }
+      }
+    });
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+    return {
+      getGui: () => input,
+      getValue: () => parseN(input.value),
+      destroy: () => {},
+      afterGuiAttached: () => {},
+    };
+  }
 
-  updateCatTotals();
-}
+  let gridApi;
+  gridApi = agGrid.createGrid(document.getElementById('expDtlGrid'), {
+    columnDefs: [
+      { headerName: '카테고리', width: 130, minWidth: 100, field: 'catNm',
+        cellRenderer: p => {
+          if (p.data.rowType === 'catHeader') {
+            return '<span class="material-symbols-rounded ms-sm me-1" style="color:#f59e0b;">folder</span><strong>' + p.data.catNm + '</strong>';
+          }
+          if (p.data.rowType === 'catSubtotal') return '<span class="text-end text-muted w-100" style="font-size:12px;">소계</span>';
+          if (p.data.rowType === 'grandTotal')  return '<span class="text-end w-100">합 계</span>';
+          if (p.data.rowType === 'remain')       return '<span class="text-end w-100" style="font-size:13px;">나머지</span>';
+          return '<span class="text-muted ps-3" style="font-size:12px;">└</span>';
+        }
+      },
+      { field: 'itemNm', headerName: '항목', flex: 1, minWidth: 120,
+        cellRenderer: p => {
+          if (p.data.rowType === 'item') return p.data.itemNm;
+          if (p.data.rowType === 'remain') return '<span class="text-muted">(예산 − 실제)</span>';
+          return '';
+        }
+      },
+      { field: 'budgetAmt', headerName: '예산', width: 140, type: 'rightAligned',
+        cellRenderer: p => {
+          if (p.data.rowType === 'item')       return '<span class="text-muted">' + fmtN(p.value) + '</span>';
+          if (p.data.rowType === 'catSubtotal') return '<span class="text-muted fw-semibold">' + fmtN(p.data._catBudget || 0) + '</span>';
+          if (p.data.rowType === 'grandTotal')  return '<span class="text-muted fw-bold">' + fmtN(p.data._totalBudget || 0) + '</span>';
+          if (p.data.rowType === 'remain') {
+            const r = p.data._remain || 0;
+            return '<span class="fw-bold ' + (r >= 0 ? 'text-success' : 'text-danger') + '">' + (r < 0 ? '-' : '') + fmtN(Math.abs(r)) + ' 원</span>';
+          }
+          return '';
+        }
+      },
+      { field: 'actualAmt', headerName: '실제 지출', width: 150, type: 'rightAligned',
+        editable: p => p.data.rowType === 'item',
+        cellEditorFramework: null,
+        cellEditor: makeCellEditor,
+        cellRenderer: p => {
+          if (p.data.rowType === 'item') return '<span class="fw-semibold">' + fmtN(p.value) + '</span>';
+          if (p.data.rowType === 'catSubtotal') return '<span class="text-primary fw-semibold">' + fmtN(p.data._catActual || 0) + '</span>';
+          if (p.data.rowType === 'grandTotal')  return '<span class="text-danger fw-bold">' + fmtN(p.data._totalActual || 0) + '</span>';
+          return '';
+        },
+        onCellValueChanged: p => {
+          if (p.data.rowType !== 'item') return;
+          p.data.actualAmt = p.newValue;
+          recalc(gridApi);
+          autoSaveItem(p.data.itemSeq, p.newValue);
+        }
+      },
+      { headerName: '잔액', width: 130, type: 'rightAligned',
+        cellRenderer: p => {
+          if (p.data.rowType !== 'item') return '';
+          const r = p.data.budgetAmt - p.data.actualAmt;
+          if (p.data.budgetAmt === 0) return '<span class="text-muted">-</span>';
+          const cls = r >= 0 ? 'text-success' : 'text-danger';
+          return '<span class="fw-semibold ' + cls + '">' + fmtN(Math.abs(r)) + '</span>';
+        }
+      },
+    ],
+    rowData,
+    defaultColDef: { sortable: false, resizable: true, suppressMovable: true },
+    domLayout: 'autoHeight',
+    suppressCellFocus: false,
+    singleClickEdit: true,
+    getRowStyle: p => {
+      const t = p.data.rowType;
+      if (t === 'catHeader')   return { background: '#eef2ff', fontWeight: 600 };
+      if (t === 'catSubtotal') return { background: '#f8fafc', fontSize: '12px' };
+      if (t === 'grandTotal')  return { background: '#f8f9fa', fontWeight: 700, fontSize: '15px' };
+      if (t === 'remain')      return { background: '#fff8e1', fontWeight: 700, color: '#92400e' };
+      return {};
+    },
+  });
 
-/* ── 자동 저장 (blur) ── */
-function autoSave(el) {
-  const itemSeq  = el.dataset.itemSeq;
-  const actualAmt = parseN(el.value);
-  const payload  = { expSeq, itemSeq: parseInt(itemSeq), actualAmt };
+  recalc(gridApi);
 
+  window._expDtlGrid = gridApi;
+})();
+
+function autoSaveItem(itemSeq, actualAmt) {
   fetch(ctx + '/living/expense/dtl/save', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(payload)
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ expSeq, itemSeq: parseInt(itemSeq), actualAmt: parseInt(actualAmt) })
   }).then(r => r.json()).then(res => {
-    if (res.success) {
-      el.classList.add('saved');
-      showStatus('저장됨');
-    } else {
-      showStatus('저장 실패: ' + (res.message || ''));
-    }
+    if (!res.success) console.warn('저장 실패:', res.message);
+    else showStatus('저장됨');
   }).catch(() => showStatus('저장 실패 (네트워크 오류)'));
 }
 
+
 /* ── 전체 저장 ── */
 function saveAll() {
+  if (!window._expDtlGrid) return;
   const items = [];
-  document.querySelectorAll('.actual-input').forEach(inp => {
-    items.push({
-      itemSeq:   parseInt(inp.dataset.itemSeq),
-      actualAmt: parseN(inp.value)
-    });
+  window._expDtlGrid.forEachNode(n => {
+    if (n.data.rowType === 'item') {
+      items.push({ itemSeq: n.data.itemSeq, actualAmt: n.data.actualAmt });
+    }
   });
-
   fetch(ctx + '/living/expense/dtl/saveAll', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ expSeq, items })
   }).then(r => r.json()).then(res => {
-    if (res.success) {
-      document.querySelectorAll('.actual-input').forEach(inp => inp.classList.add('saved'));
-      showStatus('전체 저장 완료!');
-    } else {
-      showStatus('저장 실패: ' + (res.message || ''));
-    }
+    showStatus(res.success ? '전체 저장 완료!' : '저장 실패: ' + (res.message || ''));
   }).catch(() => showStatus('저장 실패 (네트워크 오류)'));
 }
 
@@ -418,27 +406,6 @@ function showStatus(msg) {
   setTimeout(() => { el.textContent = ''; }, 3000);
 }
 
-/* ── 페이지 로드 시 초기화 ── */
-window.addEventListener('DOMContentLoaded', () => {
-  // 각 행 잔액 초기 계산
-  document.querySelectorAll('.actual-input').forEach(el => {
-    updateRowRemain(el);
-  });
-  updateSummary();
-
-  // Enter키로 다음 항목 이동
-  const inputs = Array.from(document.querySelectorAll('.actual-input'));
-  inputs.forEach((inp, idx) => {
-    inp.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        autoSave(inp);
-        const next = inputs[idx + 1];
-        if (next) { next.focus(); next.select(); }
-      }
-    });
-  });
-});
 </script>
 </body>
 </html>

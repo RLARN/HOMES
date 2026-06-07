@@ -136,76 +136,19 @@
               </div>
 
               <div class="card-body pt-2 px-3 px-md-4">
-                <div class="table-responsive">
-                  <table class="table align-middle homes-table">
-                    <thead>
-                      <tr class="text-muted small">
-                        <th style="width: 120px;">요청일</th>
-                        <th>사유</th>
-                        <th style="width: 140px;" class="text-end">금액</th>
-                        <th style="width: 110px;" class="text-center">상태</th>
-                        <th style="width: 90px;" class="text-center">상세</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <c:choose>
-                        <c:when test="${empty requestList}">
-                          <tr>
-                            <td colspan="5">
-                              <div class="homes-empty">
-                                아직 등록된 입금요청이 없어요.
-                                <span class="text-muted">(좌측에서 작성 후 상신)</span>
-                              </div>
-                            </td>
-                          </tr>
-                        </c:when>
-
-                        <c:otherwise>
-                          <c:forEach var="row" items="${requestList}">
-                            <tr>
-                              <!-- 날짜 -->
-                              <td class="text-muted small">
-                                <c:out value="${row.requestDt}" />
-                              </td>
-
-                              <!-- 사유 -->
-                              <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 520px;">
-                                  <c:out value="${row.reason}" />
-                                </div>
-                                <div class="text-muted small">
-                                  <c:out value="${row.requesterNm}" />
-                                </div>
-                              </td>
-
-                              <!-- 금액 -->
-                              <td class="text-end fw-bold">
-                                <c:out value="${row.amount}" />
-                              </td>
-
-                              <!-- 상태 -->
-                              <td class="text-center">
-                                <span class="badge rounded-pill
-                                  ${row.status == 'APPROVED' ? 'text-bg-success' :
-                                    (row.status == 'REJECTED' ? 'text-bg-danger' : 'text-bg-secondary')}">
-                                  <c:out value="${row.status}" />
-                                </span>
-                              </td>
-
-                              <!-- 상세 -->
-                              <td class="text-center">
-                                <a class="btn btn-sm btn-outline-secondary homes-pill"
-                                   href="${pageContext.request.contextPath}/scm/purchase/request/detail?id=${row.requestId}">
-                                  보기
-                                </a>
-                              </td>
-                            </tr>
-                          </c:forEach>
-                        </c:otherwise>
-                      </c:choose>
-                    </tbody>
-                  </table>
-                </div>
+                <c:choose>
+                  <c:when test="${empty requestList}">
+                    <div class="homes-empty">
+                      아직 등록된 입금요청이 없어요.
+                      <span class="text-muted">(좌측에서 작성 후 상신)</span>
+                    </div>
+                  </c:when>
+                  <c:otherwise>
+                    <div class="homes-ag-wrap">
+                      <div id="reqGrid" class="ag-theme-alpine"></div>
+                    </div>
+                  </c:otherwise>
+                </c:choose>
 
                 <!-- 페이징 자리(나중에) -->
                 <c:if test="${not empty page}">
@@ -225,6 +168,60 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+  (function () {
+    function d(s) { const el = document.createElement('textarea'); el.innerHTML = s; return el.value; }
+    const rowData = [];
+    <c:forEach var="row" items="${requestList}">
+    rowData.push({
+      requestId:   '${row.requestId}',
+      requestDt:   d('<c:out value="${row.requestDt}"/>'),
+      reason:      d('<c:out value="${row.reason}"/>'),
+      requesterNm: d('<c:out value="${row.requesterNm}"/>'),
+      amount:      d('<c:out value="${row.amount}"/>'),
+      status:      d('<c:out value="${row.status}"/>'),
+    });
+    </c:forEach>
+
+    if (!rowData.length) return;
+    const ctx = '${pageContext.request.contextPath}';
+    const statusBadge = s => {
+      if (s === 'APPROVED') return '<span class="badge rounded-pill text-bg-success">APPROVED</span>';
+      if (s === 'REJECTED') return '<span class="badge rounded-pill text-bg-danger">REJECTED</span>';
+      return '<span class="badge rounded-pill text-bg-secondary">' + s + '</span>';
+    };
+
+    agGrid.createGrid(document.getElementById('reqGrid'), {
+      columnDefs: [
+        { field: 'requestDt', headerName: '요청일', width: 120, cellClass: 'text-muted' },
+        { field: 'reason', headerName: '사유', flex: 1, minWidth: 200,
+          cellRenderer: p => `<div>
+            <div class="fw-semibold text-truncate">${p.data.reason}</div>
+            <div class="text-muted" style="font-size:11px;">${p.data.requesterNm}</div>
+          </div>`, autoHeight: true },
+        { field: 'amount',  headerName: '금액',  width: 140, type: 'rightAligned',
+          cellRenderer: p => '<span class="fw-bold">' + p.value + '</span>' },
+        { field: 'status',  headerName: '상태',  width: 110,
+          cellStyle: { justifyContent: 'center' },
+          cellRenderer: p => statusBadge(p.value) },
+        { headerName: '상세', width: 90, sortable: false,
+          cellStyle: { justifyContent: 'center' },
+          cellRenderer: p => {
+            const a = document.createElement('a');
+            a.className = 'btn btn-sm btn-outline-secondary homes-pill';
+            a.href = ctx + '/scm/purchase/request/detail?id=' + p.data.requestId;
+            a.textContent = '보기';
+            return a;
+          }
+        },
+      ],
+      rowData,
+      defaultColDef: { sortable: true, resizable: true, suppressMovable: true },
+      domLayout: 'autoHeight',
+      suppressCellFocus: true,
+    });
+  })();
+  </script>
 
   <style>
     /* 페이지 전용: 메인 톤 유지하면서 입력 카드 강조 */

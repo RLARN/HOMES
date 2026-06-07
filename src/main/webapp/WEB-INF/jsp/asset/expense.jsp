@@ -75,89 +75,17 @@
 
       <!-- 목록 -->
       <div class="card homes-card">
-        <div class="card-body pt-2 px-3 px-md-4">
-          <div class="table-responsive">
-            <table class="table align-middle homes-table">
-              <thead>
-                <tr class="text-muted small">
-                  <th style="width:60px;" class="text-center">ON/OFF</th>
-                  <th>지출명</th>
-                  <th style="width:110px;" class="text-nowrap">유형</th>
-                  <th style="width:80px;"  class="text-nowrap text-center">구분</th>
-                  <th style="width:150px;" class="text-nowrap text-end">금액</th>
-                  <th style="width:160px;" class="text-nowrap">사이클</th>
-                  <th style="width:100px;" class="text-nowrap">시작일</th>
-                  <th style="width:100px;" class="text-nowrap">종료일</th>
-                  <th style="width:90px;" class="text-nowrap">수정자</th>
-                  <th style="width:100px;" class="text-nowrap">수정일</th>
-                  <th style="width:80px;"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <c:choose>
-                  <c:when test="${empty planList}">
-                    <tr><td colspan="11"><div class="homes-empty">등록된 정기지출이 없습니다.</div></td></tr>
-                  </c:when>
-                  <c:otherwise>
-                    <c:forEach var="p" items="${planList}">
-                      <tr class="${p.useYn == 'N' ? 'text-muted' : ''}">
-                        <td class="text-center" onclick="event.stopPropagation();">
-                          <div class="form-check form-switch d-flex justify-content-center m-0">
-                            <input class="form-check-input use-toggle" type="checkbox"
-                                   data-plan-seq="${p.planSeq}"
-                                   data-url="${pageContext.request.contextPath}/asset/expense/toggle"
-                                   ${p.useYn == 'Y' ? 'checked' : ''}
-                                   style="cursor:pointer;">
-                          </div>
-                        </td>
-                        <td onclick="HOMES.go('${pageContext.request.contextPath}/asset/expense/form?planSeq=${p.planSeq}')" style="cursor:pointer;">
-                          <div class="fw-semibold"><c:out value="${p.planNm}"/></div>
-                          <c:if test="${not empty p.memo}">
-                            <div class="text-muted small text-truncate" style="max-width:240px;"><c:out value="${p.memo}"/></div>
-                          </c:if>
-                        </td>
-                        <td class="text-nowrap">
-                          <span class="badge bg-danger-subtle text-danger"><c:out value="${p.planTypeNm}"/></span>
-                        </td>
-                        <td class="text-center text-nowrap">
-                          <c:choose>
-                            <c:when test="${p.flowType == 'SAVING'}">
-                              <span class="badge bg-primary-subtle text-primary" style="font-size:10px;">저축</span>
-                            </c:when>
-                            <c:when test="${p.flowType == 'INVEST'}">
-                              <span class="badge bg-warning-subtle text-warning" style="font-size:10px;">투자</span>
-                            </c:when>
-                            <c:otherwise>
-                              <span class="badge bg-danger-subtle text-danger" style="font-size:10px;">지출</span>
-                            </c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td class="text-end text-nowrap fw-semibold text-danger">
-                          <fmt:formatNumber value="${p.amount}" pattern="#,##0"/> 원
-                        </td>
-                        <td class="small text-nowrap"><c:out value="${p.cycleDesc}"/></td>
-                        <td class="text-muted small text-nowrap">${p.startYmd}</td>
-                        <td class="text-muted small text-nowrap">${p.endYmd}</td>
-                        <td class="small text-nowrap"><c:out value="${p.updId}"/></td>
-                        <td class="text-muted small text-nowrap">${p.updDtStr}</td>
-                        <td class="text-nowrap" onclick="event.stopPropagation();">
-                          <a href="${pageContext.request.contextPath}/asset/expense/form?planSeq=${p.planSeq}"
-                             class="btn btn-xs btn-outline-primary homes-pill px-2 py-0" style="font-size:12px;">수정</a>
-                          <c:if test="${sessionScope.LoginVO.userAuth == 'MANAGER'}">
-                            <form method="post" action="${pageContext.request.contextPath}/asset/expense/delete"
-                                  class="d-inline" onsubmit="return confirm('삭제하시겠습니까?');">
-                              <input type="hidden" name="planSeq" value="${p.planSeq}">
-                              <button type="submit" class="btn btn-xs btn-outline-danger homes-pill px-2 py-0" style="font-size:12px;">삭제</button>
-                            </form>
-                          </c:if>
-                        </td>
-                      </tr>
-                    </c:forEach>
-                  </c:otherwise>
-                </c:choose>
-              </tbody>
-            </table>
-          </div>
+        <div class="card-body p-0">
+          <c:choose>
+            <c:when test="${empty planList}">
+              <div class="homes-empty">등록된 정기지출이 없습니다.</div>
+            </c:when>
+            <c:otherwise>
+              <div class="homes-ag-wrap">
+                <div id="expenseGrid" class="ag-theme-alpine"></div>
+              </div>
+            </c:otherwise>
+          </c:choose>
         </div>
       </div>
 
@@ -168,24 +96,111 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  document.querySelectorAll('.use-toggle').forEach(function (el) {
-    el.addEventListener('change', function () {
-      const planSeq = this.dataset.planSeq;
-      const url     = this.dataset.url;
-      const cb      = this;
-      fetch(url, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'planSeq=' + planSeq
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.success) { cb.checked = !cb.checked; alert(data.message); }
-        else { location.reload(); }
-      })
-      .catch(() => { cb.checked = !cb.checked; alert('오류가 발생했습니다.'); });
-    });
+const ctx = '${pageContext.request.contextPath}';
+const isManager = '${sessionScope.LoginVO.userAuth}' === 'MANAGER';
+
+function togglePlan(cb, planSeq, url) {
+  fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'planSeq=' + planSeq
+  }).then(r => r.json()).then(data => {
+    if (!data.success) { cb.checked = !cb.checked; alert(data.message); }
+    else { location.reload(); }
+  }).catch(() => { cb.checked = !cb.checked; alert('오류가 발생했습니다.'); });
+}
+
+(function () {
+  function d(s) { const el = document.createElement('textarea'); el.innerHTML = s; return el.value; }
+
+  const rowData = [];
+  <c:forEach var="p" items="${planList}">
+  rowData.push({
+    planSeq:    ${p.planSeq},
+    planNm:     d('<c:out value="${p.planNm}"/>'),
+    memo:       d('<c:out value="${p.memo}"/>'),
+    planTypeNm: d('<c:out value="${p.planTypeNm}"/>'),
+    flowType:   '${p.flowType}',
+    amount:     ${p.amount},
+    cycleDesc:  d('<c:out value="${p.cycleDesc}"/>'),
+    startYmd:   '${p.startYmd}',
+    endYmd:     '${p.endYmd}',
+    updId:      d('<c:out value="${p.updId}"/>'),
+    updDtStr:   '${p.updDtStr}',
+    useYn:      '${p.useYn}',
   });
+  </c:forEach>
+
+  if (!rowData.length) return;
+
+  const flowBadge = {
+    SAVING: '<span class="badge bg-primary-subtle text-primary">저축</span>',
+    INVEST: '<span class="badge bg-warning-subtle text-warning">투자</span>',
+    EXPENSE:'<span class="badge bg-danger-subtle text-danger">지출</span>',
+  };
+
+  agGrid.createGrid(document.getElementById('expenseGrid'), {
+    columnDefs: [
+      { headerName: 'ON/OFF', width: 75, sortable: false,
+        cellStyle: { justifyContent: 'center' },
+        cellRenderer: p => {
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.className = 'form-check-input';
+          cb.checked = p.data.useYn === 'Y';
+          cb.style.cursor = 'pointer';
+          cb.addEventListener('click', e => e.stopPropagation());
+          cb.addEventListener('change', () => togglePlan(cb, p.data.planSeq, ctx + '/asset/expense/toggle'));
+          return cb;
+        }
+      },
+      { field: 'planNm', headerName: '지출명', flex: 1, minWidth: 160,
+        cellRenderer: p => {
+          const memo = p.data.memo ? '<div class="text-muted" style="font-size:11px;">' + p.data.memo + '</div>' : '';
+          return '<div><div class="fw-semibold">' + p.data.planNm + '</div>' + memo + '</div>';
+        }, autoHeight: true },
+      { field: 'planTypeNm', headerName: '유형', width: 110,
+        cellRenderer: p => '<span class="badge bg-danger-subtle text-danger">' + p.value + '</span>' },
+      { field: 'flowType', headerName: '구분', width: 80,
+        cellStyle: { justifyContent: 'center' },
+        cellRenderer: p => flowBadge[p.value] || flowBadge.EXPENSE },
+      { field: 'amount', headerName: '금액', width: 150, type: 'rightAligned',
+        cellRenderer: p => '<span class="fw-semibold text-danger">' + Number(p.value).toLocaleString('ko-KR') + ' 원</span>' },
+      { field: 'cycleDesc', headerName: '사이클', width: 140 },
+      { field: 'startYmd',  headerName: '시작일', width: 100, cellClass: 'text-muted' },
+      { field: 'endYmd',    headerName: '종료일', width: 100, cellClass: 'text-muted' },
+      { field: 'updId',     headerName: '수정자', width: 90 },
+      { field: 'updDtStr',  headerName: '수정일', width: 110, cellClass: 'text-muted' },
+      { headerName: '', width: isManager ? 110 : 65, sortable: false,
+        cellRenderer: p => {
+          const el = document.createElement('div');
+          el.className = 'd-flex gap-1';
+          el.innerHTML = '<a href="' + ctx + '/asset/expense/form?planSeq=' + p.data.planSeq + '"' +
+            ' class="btn btn-xs btn-outline-primary homes-pill px-2 py-0" style="font-size:12px;"' +
+            ' onclick="event.stopPropagation()">수정</a>';
+          if (isManager) {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = ctx + '/asset/expense/delete';
+            form.className = 'd-inline';
+            form.onsubmit = () => confirm('삭제하시겠습니까?');
+            form.innerHTML = '<input type="hidden" name="planSeq" value="' + p.data.planSeq + '">' +
+              '<button type="submit" class="btn btn-xs btn-outline-danger homes-pill px-2 py-0"' +
+              ' style="font-size:12px;" onclick="event.stopPropagation()">삭제</button>';
+            el.appendChild(form);
+          }
+          return el;
+        }
+      },
+    ],
+    rowData,
+    defaultColDef: { sortable: true, resizable: true, suppressMovable: true },
+    domLayout: 'autoHeight',
+    suppressCellFocus: true,
+    getRowStyle: p => ({ cursor: 'pointer', opacity: p.data.useYn === 'N' ? 0.7 : 1 }),
+    onRowClicked: p => HOMES.go(ctx + '/asset/expense/form?planSeq=' + p.data.planSeq),
+  });
+})();
 </script>
 </body>
 </html>

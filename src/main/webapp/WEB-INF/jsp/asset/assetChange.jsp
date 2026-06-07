@@ -288,54 +288,8 @@
             </div>
             <div class="collapse show" id="snapshotTable">
               <div class="card-body p-0">
-                <div class="table-responsive">
-                  <table class="table align-middle homes-table tbl-snapshot mb-0">
-                    <thead class="table-light">
-                      <tr>
-                        <th>전표 기준월</th>
-                        <th class="text-end">총 자산</th>
-                        <th class="text-end">총 대출</th>
-                        <th class="text-end">순 자산</th>
-                        <th class="text-end">유동 자산</th>
-                        <th class="text-end">비유동 자산</th>
-                        <th class="text-end">월 수입계획</th>
-                        <th class="text-end">월 지출계획</th>
-                        <th class="text-end">순자산 증감 (MoM)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <c:forEach var="s" items="${summaryList}" varStatus="st">
-                        <tr>
-                          <td class="fw-semibold">${s.hstYymm.substring(0,4)}년 ${s.hstYymm.substring(4,6)}월</td>
-                          <td class="text-end text-primary">
-                            <fmt:formatNumber value="${s.totalAssetAmt}" pattern="#,##0"/>
-                          </td>
-                          <td class="text-end text-danger">
-                            <fmt:formatNumber value="${s.totalLoanBalance}" pattern="#,##0"/>
-                          </td>
-                          <td class="text-end fw-bold ${s.netAssetAmt >= 0 ? 'text-success' : 'text-danger'}">
-                            <c:if test="${s.netAssetAmt < 0}">-</c:if>
-                            <fmt:formatNumber value="${s.netAssetAmt < 0 ? -s.netAssetAmt : s.netAssetAmt}" pattern="#,##0"/>
-                          </td>
-                          <td class="text-end">
-                            <fmt:formatNumber value="${s.liquidAssetAmt}" pattern="#,##0"/>
-                          </td>
-                          <td class="text-end">
-                            <fmt:formatNumber value="${s.fixedAssetAmt}" pattern="#,##0"/>
-                          </td>
-                          <td class="text-end text-success">
-                            <fmt:formatNumber value="${s.monthlyIncome}" pattern="#,##0"/>
-                          </td>
-                          <td class="text-end text-danger">
-                            <fmt:formatNumber value="${s.monthlyExpense}" pattern="#,##0"/>
-                          </td>
-                          <td class="text-end" id="mom-${st.index}">
-                            <span class="text-muted small">-</span>
-                          </td>
-                        </tr>
-                      </c:forEach>
-                    </tbody>
-                  </table>
+                <div class="homes-ag-wrap">
+                  <div id="snapshotGrid" class="ag-theme-alpine"></div>
                 </div>
               </div>
             </div>
@@ -739,15 +693,69 @@ new Chart(document.getElementById('cashflowChart'), {
   }
 });
 
-/* ━━━━━━━━━━━━━━━━ 테이블 MoM 컬럼 채우기 ━━━━━━━━━━━━━━━━ */
-MOM.forEach((v, i) => {
-  const el = document.getElementById('mom-' + i);
-  if (!el) return;
-  if (i === 0) { el.innerHTML = '<span class="text-muted small">-</span>'; return; }
-  const cls = v > 0 ? 'mom-positive' : v < 0 ? 'mom-negative' : 'mom-zero';
-  const prefix = v > 0 ? '+' : v < 0 ? '' : '';
-  el.innerHTML = '<span class="' + cls + '">' + prefix + Number(v).toLocaleString('ko-KR') + '원</span>';
-});
+/* ━━━━━━━━━━━━━━━━ 스냅샷 AG Grid ━━━━━━━━━━━━━━━━ */
+(function () {
+  const snapData = [];
+  <c:forEach var="s" items="${summaryList}" varStatus="st">
+  snapData.push({
+    label:           '${s.hstYymm.substring(0,4)}년 ${s.hstYymm.substring(4,6)}월',
+    hstYymm:         '${s.hstYymm}',
+    totalAssetAmt:   ${s.totalAssetAmt},
+    totalLoanBalance:${s.totalLoanBalance},
+    netAssetAmt:     ${s.netAssetAmt},
+    liquidAssetAmt:  ${s.liquidAssetAmt},
+    fixedAssetAmt:   ${s.fixedAssetAmt},
+    monthlyIncome:   ${s.monthlyIncome},
+    monthlyExpense:  ${s.monthlyExpense},
+    idx:             ${st.index},
+  });
+  </c:forEach>
+
+  // MoM 계산
+  snapData.forEach((r, i) => {
+    r.mom = i === 0 ? null : r.netAssetAmt - snapData[i - 1].netAssetAmt;
+  });
+
+  function won(v) { return Number(v).toLocaleString('ko-KR'); }
+
+  agGrid.createGrid(document.getElementById('snapshotGrid'), {
+    columnDefs: [
+      { field: 'label', headerName: '전표 기준월', width: 140,
+        cellRenderer: p => '<span class="fw-semibold">' + p.value + '</span>' },
+      { field: 'totalAssetAmt',    headerName: '총 자산',    minWidth: 110, type: 'rightAligned',
+        cellRenderer: p => '<span class="text-primary">' + won(p.value) + '</span>' },
+      { field: 'totalLoanBalance', headerName: '총 대출',    minWidth: 110, type: 'rightAligned',
+        cellRenderer: p => '<span class="text-danger">' + won(p.value) + '</span>' },
+      { field: 'netAssetAmt',      headerName: '순 자산',    minWidth: 110, type: 'rightAligned',
+        cellRenderer: p => {
+          const cls = p.value >= 0 ? 'text-success' : 'text-danger';
+          const sign = p.value < 0 ? '-' : '';
+          return '<span class="fw-bold ' + cls + '">' + sign + won(Math.abs(p.value)) + '</span>';
+        }
+      },
+      { field: 'liquidAssetAmt', headerName: '유동 자산',   minWidth: 110, type: 'rightAligned',
+        valueFormatter: p => won(p.value) },
+      { field: 'fixedAssetAmt',  headerName: '비유동 자산', minWidth: 110, type: 'rightAligned',
+        valueFormatter: p => won(p.value) },
+      { field: 'monthlyIncome',  headerName: '월 수입계획', minWidth: 110, type: 'rightAligned',
+        cellRenderer: p => '<span class="text-success">' + won(p.value) + '</span>' },
+      { field: 'monthlyExpense', headerName: '월 지출계획', minWidth: 110, type: 'rightAligned',
+        cellRenderer: p => '<span class="text-danger">' + won(p.value) + '</span>' },
+      { field: 'mom', headerName: '순자산 증감 (MoM)', minWidth: 130, type: 'rightAligned',
+        cellRenderer: p => {
+          if (p.value === null) return '<span class="text-muted">-</span>';
+          const cls = p.value > 0 ? 'text-success fw-semibold' : p.value < 0 ? 'text-danger fw-semibold' : 'text-muted';
+          const sign = p.value > 0 ? '+' : '';
+          return '<span class="' + cls + '">' + sign + Number(p.value).toLocaleString('ko-KR') + '원</span>';
+        }
+      },
+    ],
+    rowData: snapData,
+    defaultColDef: { sortable: true, resizable: true, suppressMovable: true },
+    domLayout: 'autoHeight',
+    suppressCellFocus: true,
+  });
+})();
 </script>
 </c:if>
 </body>

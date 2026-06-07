@@ -75,94 +75,17 @@
 
       <!-- 자산 목록 -->
       <div class="card homes-card">
-        <div class="card-body pt-2 px-3 px-md-4">
-          <div class="table-responsive">
-            <table class="table align-middle homes-table">
-              <thead>
-                <tr class="text-muted small">
-                  <th>자산명</th>
-                  <th style="width:120px;" class="text-nowrap">자산형태</th>
-                  <th style="width:80px;"  class="text-nowrap text-center">유동성</th>
-                  <th style="width:150px;" class="text-nowrap text-end">금액</th>
-                  <th style="width:80px;"  class="text-nowrap text-center">상태</th>
-                  <th style="width:100px;" class="text-nowrap">말소일</th>
-                  <th style="width:100px;" class="text-nowrap">수정자</th>
-                  <th style="width:110px;" class="text-nowrap">수정일</th>
-                  <th style="width:80px;"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <c:choose>
-                  <c:when test="${empty assetList}">
-                    <tr>
-                      <td colspan="9">
-                        <div class="homes-empty">등록된 자산이 없습니다.</div>
-                      </td>
-                    </tr>
-                  </c:when>
-                  <c:otherwise>
-                    <c:forEach var="a" items="${assetList}">
-                      <tr onclick="HOMES.go('${pageContext.request.contextPath}/asset/ledger/form?assetSeq=${a.assetSeq}')"
-                          style="cursor:pointer;">
-                        <td>
-                          <div class="fw-semibold text-truncate" style="max-width:280px;">
-                            <c:out value="${a.assetNm}"/>
-                          </div>
-                          <c:if test="${not empty a.memo}">
-                            <div class="text-muted small text-truncate" style="max-width:280px;">
-                              <c:out value="${a.memo}"/>
-                            </div>
-                          </c:if>
-                        </td>
-                        <td class="text-nowrap"><c:out value="${a.assetTypeNm}"/></td>
-                        <td class="text-center text-nowrap">
-                          <c:choose>
-                            <c:when test="${a.liquidYn == 'Y'}">
-                              <span class="badge bg-success-subtle text-success">유동</span>
-                            </c:when>
-                            <c:otherwise>
-                              <span class="badge bg-secondary-subtle text-secondary">비유동</span>
-                            </c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td class="text-end text-nowrap fw-semibold">
-                          <fmt:formatNumber value="${a.amount}" pattern="#,##0"/> 원
-                        </td>
-                        <td class="text-center text-nowrap">
-                          <c:choose>
-                            <c:when test="${a.disposeYn == 'Y'}">
-                              <span class="badge bg-warning-subtle text-warning">말소됨</span>
-                            </c:when>
-                            <c:otherwise>
-                              <span class="badge bg-primary-subtle text-primary">보유중</span>
-                            </c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td class="text-muted text-nowrap small">
-                          <c:if test="${not empty a.disposeYmd}">
-                            <c:out value="${a.disposeYmd}"/>
-                          </c:if>
-                        </td>
-                        <td class="text-nowrap small"><c:out value="${a.updId}"/></td>
-                        <td class="text-muted text-nowrap small">${a.updDtStr}</td>
-                        <td class="text-nowrap" onclick="event.stopPropagation();">
-                          <a href="${pageContext.request.contextPath}/asset/ledger/form?assetSeq=${a.assetSeq}"
-                             class="btn btn-xs btn-outline-primary homes-pill px-2 py-0" style="font-size:12px;">수정</a>
-                          <c:if test="${sessionScope.LoginVO.userAuth == 'manager'}">
-                            <button type="button"
-                                    class="btn btn-xs btn-outline-danger homes-pill px-2 py-0"
-                                    style="font-size:12px;"
-                                    data-asset-seq="${a.assetSeq}"
-                                    onclick="deleteAsset(this)">삭제</button>
-                          </c:if>
-                        </td>
-                      </tr>
-                    </c:forEach>
-                  </c:otherwise>
-                </c:choose>
-              </tbody>
-            </table>
-          </div>
+        <div class="card-body p-0">
+          <c:choose>
+            <c:when test="${empty assetList}">
+              <div class="homes-empty">등록된 자산이 없습니다.</div>
+            </c:when>
+            <c:otherwise>
+              <div class="homes-ag-wrap">
+                <div id="assetGrid" class="ag-theme-alpine"></div>
+              </div>
+            </c:otherwise>
+          </c:choose>
         </div>
       </div>
 
@@ -185,6 +108,80 @@
 <script>
 window.HOMES = window.HOMES || {};
 HOMES.ctx = '${pageContext.request.contextPath}';
+const isManager = '${sessionScope.LoginVO.userAuth}' === 'manager';
+
+(function () {
+  function d(s) { const el = document.createElement('textarea'); el.innerHTML = s; return el.value; }
+
+  const rowData = [];
+  <c:forEach var="a" items="${assetList}">
+  rowData.push({
+    assetSeq:    ${a.assetSeq},
+    assetNm:     d('<c:out value="${a.assetNm}"/>'),
+    memo:        d('<c:out value="${a.memo}"/>'),
+    assetTypeNm: d('<c:out value="${a.assetTypeNm}"/>'),
+    liquidYn:    '${a.liquidYn}',
+    amount:      ${a.amount},
+    disposeYn:   '${a.disposeYn}',
+    disposeYmd:  '${a.disposeYmd}',
+    updId:       d('<c:out value="${a.updId}"/>'),
+    updDtStr:    '${a.updDtStr}',
+  });
+  </c:forEach>
+
+  if (!rowData.length) return;
+
+  agGrid.createGrid(document.getElementById('assetGrid'), {
+    columnDefs: [
+      { field: 'assetNm', headerName: '자산명', flex: 1, minWidth: 160,
+        cellRenderer: p => {
+          const memo = p.data.memo ? '<div class="text-muted" style="font-size:11px;">' + p.data.memo + '</div>' : '';
+          return '<div><div class="fw-semibold">' + p.data.assetNm + '</div>' + memo + '</div>';
+        }, autoHeight: true },
+      { field: 'assetTypeNm', headerName: '자산형태', width: 120 },
+      { field: 'liquidYn', headerName: '유동성', width: 85,
+        cellStyle: { justifyContent: 'center' },
+        cellRenderer: p => p.value === 'Y'
+          ? '<span class="badge bg-success-subtle text-success">유동</span>'
+          : '<span class="badge bg-secondary-subtle text-secondary">비유동</span>' },
+      { field: 'amount', headerName: '금액', width: 150, type: 'rightAligned',
+        cellRenderer: p => '<span class="fw-semibold">' + Number(p.value).toLocaleString('ko-KR') + ' 원</span>' },
+      { field: 'disposeYn', headerName: '상태', width: 85,
+        cellStyle: { justifyContent: 'center' },
+        cellRenderer: p => p.value === 'Y'
+          ? '<span class="badge bg-warning-subtle text-warning">말소됨</span>'
+          : '<span class="badge bg-primary-subtle text-primary">보유중</span>' },
+      { field: 'disposeYmd', headerName: '말소일',  width: 100, cellClass: 'text-muted' },
+      { field: 'updId',      headerName: '수정자',  width: 90 },
+      { field: 'updDtStr',   headerName: '수정일',  width: 115, cellClass: 'text-muted' },
+      { headerName: '', width: isManager ? 110 : 65, sortable: false,
+        cellRenderer: p => {
+          const el = document.createElement('div');
+          el.className = 'd-flex gap-1';
+          el.innerHTML = '<a href="' + HOMES.ctx + '/asset/ledger/form?assetSeq=' + p.data.assetSeq + '"' +
+            ' class="btn btn-xs btn-outline-primary homes-pill px-2 py-0" style="font-size:12px;"' +
+            ' onclick="event.stopPropagation()">수정</a>';
+          if (isManager) {
+            const del = document.createElement('button');
+            del.className = 'btn btn-xs btn-outline-danger homes-pill px-2 py-0';
+            del.style.fontSize = '12px';
+            del.textContent = '삭제';
+            del.setAttribute('data-asset-seq', p.data.assetSeq);
+            del.addEventListener('click', e => { e.stopPropagation(); deleteAsset(del); });
+            el.appendChild(del);
+          }
+          return el;
+        }
+      },
+    ],
+    rowData,
+    defaultColDef: { sortable: true, resizable: true, suppressMovable: true },
+    domLayout: 'autoHeight',
+    suppressCellFocus: true,
+    getRowStyle: () => ({ cursor: 'pointer' }),
+    onRowClicked: p => HOMES.go(HOMES.ctx + '/asset/ledger/form?assetSeq=' + p.data.assetSeq),
+  });
+})();
 
 (function () {
   const toastEl = document.getElementById('appToast');

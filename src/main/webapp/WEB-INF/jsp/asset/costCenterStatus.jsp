@@ -208,162 +208,20 @@
               <span class="material-symbols-rounded ms-sm">list_alt</span>수지계정별 상세 내역
             </div>
             <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table align-middle homes-table table-status mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th style="width:22%">수지계정</th>
-                      <th style="width:16%">수입원</th>
-                      <th class="text-end" style="width:13%">월 수입</th>
-                      <th class="text-end" style="width:13%">월 지출</th>
-                      <th class="text-end" style="width:13%">기간 총 수입</th>
-                      <th class="text-end" style="width:13%">기간 총 지출</th>
-                      <th class="text-end" style="width:10%">잔액</th>
-                    </tr>
-                  </thead>
-                  <tbody id="ccTableBody">
-                    <c:forEach var="s" items="${statusList}" varStatus="vs">
-                      <c:set var="hasItems" value="${not empty s.expensePlans or not empty s.incomePlanNm}"/>
-
-                      <%-- ── 수지계정 요약 행 ── --%>
-                      <tr class="cc-summary-row"
-                          onclick="toggleCC(${vs.index})"
-                          data-idx="${vs.index}">
-                        <td>
-                          <span class="cc-toggle-icon" id="icon-${vs.index}">▶</span>
-                          <span class="fw-semibold">${s.ccNm}</span>
-                          <c:if test="${s.ccType == 'AUTO'}">
-                            <span class="badge bg-light text-secondary border ms-1" style="font-size:10px;">자동</span>
-                          </c:if>
-                        </td>
-                        <td class="text-muted small">
-                          <c:choose>
-                            <c:when test="${not empty s.incomePlanNm}">
-                              <span class="badge bg-success-subtle text-success border">${s.incomePlanNm}</span>
-                            </c:when>
-                            <c:otherwise>-</c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td class="text-end text-success">
-                          <fmt:formatNumber value="${s.incomeMonthlyAmt}" pattern="#,##0"/>
-                        </td>
-                        <td class="text-end text-danger">
-                          <fmt:formatNumber value="${s.expenseMonthlyAmt}" pattern="#,##0"/>
-                        </td>
-                        <td class="text-end fw-semibold text-success">
-                          <fmt:formatNumber value="${s.totalIncomeAmt}" pattern="#,##0"/>
-                        </td>
-                        <td class="text-end fw-semibold text-danger">
-                          <fmt:formatNumber value="${s.totalExpenseAmt}" pattern="#,##0"/>
-                        </td>
-                        <td class="text-end fw-semibold ${s.balance >= 0 ? 'text-success' : 'text-danger'}">
-                          <c:if test="${s.balance < 0}">-</c:if>
-                          <fmt:formatNumber value="${s.balance < 0 ? -s.balance : s.balance}" pattern="#,##0"/>
-                        </td>
-                      </tr>
-
-                      <%-- ── 하위 항목 행 (기본 숨김) ── --%>
-                      <c:choose>
-                        <c:when test="${not empty s.incomePlanNm}">
-                          <%-- 수입원 행 --%>
-                          <tr class="cc-detail-row" id="detail-${vs.index}" style="display:none;">
-                            <td class="sub-label">
-                              <span class="sub-type type-income">수입</span>
-                              &nbsp;${s.incomePlanNm}
-                            </td>
-                            <td>-</td>
-                            <td class="text-end text-success">
-                              <fmt:formatNumber value="${s.incomeMonthlyAmt}" pattern="#,##0"/>
-                            </td>
-                            <td class="text-end">-</td>
-                            <td class="text-end text-success">
-                              <fmt:formatNumber value="${s.totalIncomeAmt}" pattern="#,##0"/>
-                            </td>
-                            <td class="text-end">-</td>
-                            <td></td>
-                          </tr>
-                        </c:when>
-                      </c:choose>
-
-                      <c:forEach var="p" items="${s.expensePlans}" varStatus="ps">
-                        <c:set var="flowCls" value="${p.flowType == 'EXPENSE' ? 'type-expense' : p.flowType == 'SAVING' ? 'type-saving' : 'type-invest'}"/>
-                        <c:set var="flowNm"  value="${p.flowType == 'EXPENSE' ? '지출' : p.flowType == 'SAVING' ? '저축' : p.flowType == 'INVEST' ? '투자' : p.flowType}"/>
-                        <tr class="cc-detail-row" id="detail-${vs.index}" style="display:none;">
-                          <td class="sub-label">
-                            <span class="sub-type ${flowCls}">${flowNm}</span>
-                            &nbsp;${p.planNm}
-                          </td>
-                          <td class="text-muted" style="font-size:12px;">${p.planTypeNm}</td>
-                          <td class="text-end">-</td>
-                          <td class="text-end text-danger">
-                            <fmt:formatNumber value="${p.amount}" pattern="#,##0"/>
-                          </td>
-                          <td class="text-end">-</td>
-                          <td class="text-end text-danger">
-                            <fmt:formatNumber value="${p.amount}" pattern="#,##0"/>
-                            <span class="text-muted" style="font-size:10px;">/월</span>
-                          </td>
-                          <td></td>
-                        </tr>
-                      </c:forEach>
-
-                      <%-- 수기 현금흐름 항목 --%>
-                      <c:forEach var="m" items="${s.manualEntries}">
-                        <c:set var="mFlowCls" value="${m.flowType == 'INCOME' ? 'type-income' : m.flowType == 'SAVING' ? 'type-saving' : m.flowType == 'INVEST' ? 'type-invest' : 'type-expense'}"/>
-                        <c:set var="mFlowNm"  value="${m.flowType == 'INCOME' ? '수기수입' : m.flowType == 'SAVING' ? '수기저축' : m.flowType == 'INVEST' ? '수기투자' : '수기지출'}"/>
-                        <tr class="cc-detail-row" id="detail-${vs.index}" style="display:none;">
-                          <td class="sub-label">
-                            <span class="sub-type ${mFlowCls}">${mFlowNm}</span>
-                            &nbsp;<c:choose>
-                              <c:when test="${not empty m.title}"><c:out value="${m.title}"/></c:when>
-                              <c:otherwise>${m.incomeYymm}</c:otherwise>
-                            </c:choose>
-                            <c:if test="${not empty m.memo}"><span class="text-muted"> — <c:out value="${m.memo}"/></span></c:if>
-                          </td>
-                          <td class="text-muted" style="font-size:12px;">수기</td>
-                          <c:choose>
-                            <c:when test="${m.flowType == 'INCOME'}">
-                              <td class="text-end text-success"><fmt:formatNumber value="${m.actualAmt}" pattern="#,##0"/></td>
-                              <td class="text-end">-</td>
-                              <td class="text-end text-success"><fmt:formatNumber value="${m.actualAmt}" pattern="#,##0"/></td>
-                              <td class="text-end">-</td>
-                            </c:when>
-                            <c:otherwise>
-                              <td class="text-end">-</td>
-                              <td class="text-end text-danger"><fmt:formatNumber value="${m.actualAmt}" pattern="#,##0"/></td>
-                              <td class="text-end">-</td>
-                              <td class="text-end text-danger"><fmt:formatNumber value="${m.actualAmt}" pattern="#,##0"/></td>
-                            </c:otherwise>
-                          </c:choose>
-                          <td></td>
-                        </tr>
-                      </c:forEach>
-
-                      <%-- 항목 없는 경우 --%>
-                      <c:if test="${empty s.expensePlans and empty s.incomePlanNm and empty s.manualEntries}">
-                        <tr class="cc-detail-row" id="detail-${vs.index}" style="display:none;">
-                          <td colspan="7" class="cc-no-detail ps-5">연결된 수입/지출 항목이 없습니다.</td>
-                        </tr>
-                      </c:if>
-
-                    </c:forEach>
-                  </tbody>
-                  <tfoot class="table-light fw-bold">
-                    <tr>
-                      <td colspan="4" class="text-end">합 계</td>
-                      <td class="text-end text-success">
-                        <fmt:formatNumber value="${grandIncome}" pattern="#,##0"/>
-                      </td>
-                      <td class="text-end text-danger">
-                        <fmt:formatNumber value="${grandExpense}" pattern="#,##0"/>
-                      </td>
-                      <td class="text-end ${grandBalance >= 0 ? 'text-success' : 'text-danger'}">
-                        <c:if test="${grandBalance < 0}">-</c:if>
-                        <fmt:formatNumber value="${grandBalance < 0 ? -grandBalance : grandBalance}" pattern="#,##0"/>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+              <div class="homes-ag-wrap">
+                <div id="ccStatusGrid" class="ag-theme-alpine"></div>
+              </div>
+              <!-- 합계 -->
+              <div class="d-flex justify-content-between align-items-center px-3 py-2 fw-bold border-top" style="background:#f8fafc;font-size:13px;">
+                <span>합 계</span>
+                <div class="d-flex gap-4">
+                  <span class="text-success">수입 <fmt:formatNumber value="${grandIncome}" pattern="#,##0"/></span>
+                  <span class="text-danger">지출 <fmt:formatNumber value="${grandExpense}" pattern="#,##0"/></span>
+                  <span class="${grandBalance >= 0 ? 'text-success' : 'text-danger'}">잔액
+                    <c:if test="${grandBalance < 0}">-</c:if>
+                    <fmt:formatNumber value="${grandBalance < 0 ? -grandBalance : grandBalance}" pattern="#,##0"/>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -443,22 +301,158 @@ function toggleAiResult() {
 
 askStatusAI();
 
-/* ── 수지계정 아코디언 토글 ── */
-function toggleCC(idx) {
-  var rows  = document.querySelectorAll('#detail-' + idx);
-  var icon  = document.getElementById('icon-' + idx);
-  var isOpen = icon.classList.contains('open');
+/* ── 수지계정 AG Grid ── */
+(function () {
+  function d(s) { const el = document.createElement('textarea'); el.innerHTML = s; return el.value; }
+  function won(v) { return v != null ? Number(v).toLocaleString('ko-KR') : '-'; }
 
-  rows.forEach(function (r) {
-    r.style.display = isOpen ? 'none' : '';
+  /* 전체 행 데이터 (요약 + 상세 행 모두 포함) */
+  const allRows = [];
+  <c:forEach var="s" items="${statusList}" varStatus="vs">
+  (function(){
+    const idx = ${vs.index};
+    /* 요약 행 */
+    allRows.push({
+      rowType: 'summary', idx,
+      ccNm:            d('<c:out value="${s.ccNm}"/>'),
+      ccType:          '${s.ccType}',
+      incomePlanNm:    d('<c:out value="${s.incomePlanNm}"/>'),
+      incomeMonthlyAmt:${s.incomeMonthlyAmt},
+      expenseMonthlyAmt:${s.expenseMonthlyAmt},
+      totalIncomeAmt:  ${s.totalIncomeAmt},
+      totalExpenseAmt: ${s.totalExpenseAmt},
+      balance:         ${s.balance},
+      expanded: false,
+      hasDetail: ${not empty s.expensePlans or not empty s.incomePlanNm or not empty s.manualEntries ? 'true' : 'false'},
+    });
+    /* 수입원 상세 */
+    <c:if test="${not empty s.incomePlanNm}">
+    allRows.push({ rowType:'detail', idx,
+      subLabel: d('<c:out value="${s.incomePlanNm}"/>'),
+      subTypeCls:'type-income', subTypeNm:'수입',
+      planTypeNm: '-',
+      incomeMonthlyAmt: ${s.incomeMonthlyAmt}, expenseMonthlyAmt: 0,
+      totalIncomeAmt: ${s.totalIncomeAmt}, totalExpenseAmt: 0, balance: null,
+    });
+    </c:if>
+    /* 정기지출 상세 */
+    <c:forEach var="p" items="${s.expensePlans}">
+    allRows.push({ rowType:'detail', idx,
+      subLabel: d('<c:out value="${p.planNm}"/>'),
+      subTypeCls: '${p.flowType == "EXPENSE" ? "type-expense" : p.flowType == "SAVING" ? "type-saving" : "type-invest"}',
+      subTypeNm:  '${p.flowType == "EXPENSE" ? "지출" : p.flowType == "SAVING" ? "저축" : "투자"}',
+      planTypeNm: d('<c:out value="${p.planTypeNm}"/>'),
+      incomeMonthlyAmt: 0, expenseMonthlyAmt: ${p.amount},
+      totalIncomeAmt: 0, totalExpenseAmt: ${p.amount}, balance: null,
+    });
+    </c:forEach>
+    /* 수기 현금흐름 */
+    <c:forEach var="m" items="${s.manualEntries}">
+    (function(){
+      const isIncome = '${m.flowType}' === 'INCOME';
+      const lbl = d('<c:out value="${not empty m.title ? m.title : m.incomeYymm}"/>');
+      const memo = d('<c:out value="${m.memo}"/>');
+      allRows.push({ rowType:'detail', idx,
+        subLabel: lbl + (memo ? ' — ' + memo : ''),
+        subTypeCls: '${m.flowType == "INCOME" ? "type-income" : m.flowType == "SAVING" ? "type-saving" : m.flowType == "INVEST" ? "type-invest" : "type-expense"}',
+        subTypeNm:  '${m.flowType == "INCOME" ? "수기수입" : m.flowType == "SAVING" ? "수기저축" : m.flowType == "INVEST" ? "수기투자" : "수기지출"}',
+        planTypeNm: '수기',
+        incomeMonthlyAmt: isIncome ? ${m.actualAmt} : 0,
+        expenseMonthlyAmt: isIncome ? 0 : ${m.actualAmt},
+        totalIncomeAmt: isIncome ? ${m.actualAmt} : 0,
+        totalExpenseAmt: isIncome ? 0 : ${m.actualAmt}, balance: null,
+      });
+    })();
+    </c:forEach>
+    <c:if test="${empty s.expensePlans and empty s.incomePlanNm and empty s.manualEntries}">
+    allRows.push({ rowType:'detail', idx, subLabel:'연결된 수입/지출 항목이 없습니다.', isEmpty: true,
+      subTypeCls:'', subTypeNm:'', planTypeNm:'',
+      incomeMonthlyAmt:0, expenseMonthlyAmt:0, totalIncomeAmt:0, totalExpenseAmt:0, balance:null });
+    </c:if>
+  })();
+  </c:forEach>
+
+  /* 초기 표시: 요약 행만 */
+  let displayRows = allRows.filter(r => r.rowType === 'summary');
+  let gridApi;
+
+  const colDefs = [
+    { field: 'ccNm', headerName: '수지계정', flex: 1, minWidth: 160,
+      cellRenderer: p => {
+        if (p.data.rowType === 'detail') {
+          if (p.data.isEmpty) return '<span class="text-muted fst-italic" style="padding-left:2.2rem;">' + p.data.subLabel + '</span>';
+          const typeHtml = p.data.subTypeCls
+            ? '<span class="sub-type ' + p.data.subTypeCls + '">' + p.data.subTypeNm + '</span>&nbsp;' : '';
+          return '<span class="sub-label" style="padding-left:2.2rem;">' + typeHtml + p.data.subLabel + '</span>';
+        }
+        const arrow = p.data.hasDetail ? '<span class="cc-toggle-icon" id="icon-' + p.data.idx + '">&nbsp;▶&nbsp;</span>' : '&emsp;';
+        const badge = p.data.ccType === 'AUTO' ? ' <span class="badge bg-light text-secondary border ms-1" style="font-size:10px;">자동</span>' : '';
+        return arrow + '<span class="fw-semibold">' + p.data.ccNm + '</span>' + badge;
+      }
+    },
+    { field: 'incomePlanNm', headerName: '수입원', width: 150, minWidth: 100,
+      cellRenderer: p => {
+        if (p.data.rowType === 'detail') return '<span class="text-muted" style="font-size:12px;">' + p.data.planTypeNm + '</span>';
+        return p.data.incomePlanNm
+          ? '<span class="badge bg-success-subtle text-success border">' + p.data.incomePlanNm + '</span>'
+          : '<span class="text-muted">-</span>';
+      }
+    },
+    { field: 'incomeMonthlyAmt',  headerName: '월 수입',    minWidth: 100, type: 'rightAligned',
+      cellRenderer: p => p.value ? '<span class="text-success">' + won(p.value) + '</span>' : '<span class="text-muted">-</span>' },
+    { field: 'expenseMonthlyAmt', headerName: '월 지출',    minWidth: 100, type: 'rightAligned',
+      cellRenderer: p => p.value ? '<span class="text-danger">' + won(p.value) + '</span>' : '<span class="text-muted">-</span>' },
+    { field: 'totalIncomeAmt',    headerName: '기간 총 수입', minWidth: 110, type: 'rightAligned',
+      cellRenderer: p => p.value ? '<span class="fw-semibold text-success">' + won(p.value) + '</span>' : '<span class="text-muted">-</span>' },
+    { field: 'totalExpenseAmt',   headerName: '기간 총 지출', minWidth: 110, type: 'rightAligned',
+      cellRenderer: p => p.value ? '<span class="fw-semibold text-danger">' + won(p.value) + '</span>' : '<span class="text-muted">-</span>' },
+    { field: 'balance', headerName: '잔액', minWidth: 100, type: 'rightAligned',
+      cellRenderer: p => {
+        if (p.data.rowType === 'detail' || p.value === null) return '';
+        const cls = p.value >= 0 ? 'text-success' : 'text-danger';
+        const sign = p.value < 0 ? '-' : '';
+        return '<span class="fw-semibold ' + cls + '">' + sign + won(Math.abs(p.value)) + '</span>';
+      }
+    },
+  ];
+
+  gridApi = agGrid.createGrid(document.getElementById('ccStatusGrid'), {
+    columnDefs: colDefs,
+    rowData: displayRows,
+    defaultColDef: { sortable: false, resizable: true, suppressMovable: true },
+    domLayout: 'autoHeight',
+    suppressCellFocus: true,
+    getRowStyle: p => ({
+      background: p.data.rowType === 'detail' ? '#fafbfd' : '',
+      cursor: p.data.rowType === 'summary' && p.data.hasDetail ? 'pointer' : 'default',
+      fontSize: p.data.rowType === 'detail' ? '12px' : '',
+    }),
+    onRowClicked: p => {
+      if (p.data.rowType !== 'summary' || !p.data.hasDetail) return;
+      const idx = p.data.idx;
+      const isExpanded = p.data.expanded;
+      if (isExpanded) {
+        // 상세 행 제거
+        const toRemove = [];
+        gridApi.forEachNode(n => { if (n.data.rowType === 'detail' && n.data.idx === idx) toRemove.push(n.data); });
+        gridApi.applyTransaction({ remove: toRemove });
+      } else {
+        // 상세 행 삽입
+        const detailRows = allRows.filter(r => r.rowType === 'detail' && r.idx === idx);
+        const currentRows = [];
+        gridApi.forEachNode(n => currentRows.push(n.data));
+        const insertIdx = currentRows.findIndex(r => r === p.data) + 1;
+        gridApi.applyTransaction({ add: detailRows, addIndex: insertIdx });
+      }
+      p.data.expanded = !isExpanded;
+      // 아이콘 갱신
+      setTimeout(() => {
+        const icon = document.getElementById('icon-' + idx);
+        if (icon) icon.innerHTML = p.data.expanded ? '&nbsp;▼&nbsp;' : '&nbsp;▶&nbsp;';
+      }, 0);
+    },
   });
-
-  if (isOpen) {
-    icon.classList.remove('open');
-  } else {
-    icon.classList.add('open');
-  }
-}
+})();
 
 /* ── 기간 빠른 선택 ── */
 function setQuick(fromOffset, toOffset) {

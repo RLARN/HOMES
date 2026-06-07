@@ -45,46 +45,13 @@
             </form>
           </div>
 
-          <div class="card-body pt-2 px-3 px-md-4">
-            <div class="table-responsive">
-              <table class="table align-middle homes-table">
-                <thead>
-                  <tr class="text-muted small">
-                    <th>제목</th>
-                    <th style="width: 140px;" class="text-nowrap">마지막 수정자</th>
-                    <th style="width: 160px;" class="text-nowrap">수정일</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <c:choose>
-                    <c:when test="${empty noteList}">
-                      <tr>
-                        <td colspan="3">
-                          <div class="homes-empty">등록된 공유메모가 없습니다.</div>
-                        </td>
-                      </tr>
-                    </c:when>
-                    <c:otherwise>
-                      <c:forEach var="note" items="${noteList}">
-                        <tr onclick="HOMES.go('${pageContext.request.contextPath}/note/detail?noteSeq=${note.noteSeq}')"
-                            style="cursor:pointer;">
-                          <td>
-                            <div class="fw-semibold text-truncate" style="max-width: 720px;">
-                              <c:out value="${note.title}" />
-                            </div>
-                            <div class="text-muted small">
-                              최초 작성자 <c:out value="${note.regId}" />
-                            </div>
-                          </td>
-                          <td class="text-nowrap"><c:out value="${note.updId}" /></td>
-                          <td class="text-muted text-nowrap"><c:out value="${note.updDtText}" /></td>
-                        </tr>
-                      </c:forEach>
-                    </c:otherwise>
-                  </c:choose>
-                </tbody>
-              </table>
+          <div class="card-body p-0 px-0">
+            <div class="homes-ag-wrap">
+              <div id="noteGrid" class="ag-theme-alpine"></div>
             </div>
+            <c:if test="${empty noteList}">
+              <div class="homes-empty">등록된 공유메모가 없습니다.</div>
+            </c:if>
           </div>
         </div>
       </div>
@@ -94,5 +61,44 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+  const ctx = '${pageContext.request.contextPath}';
+  function d(s) { const el = document.createElement('textarea'); el.innerHTML = s; return el.value; }
+
+  const rowData = [];
+  <c:forEach var="note" items="${noteList}">
+  rowData.push({
+    noteSeq: ${note.noteSeq},
+    title:   d('<c:out value="${note.title}"/>'),
+    regId:   d('<c:out value="${note.regId}"/>'),
+    updId:   d('<c:out value="${note.updId}"/>'),
+    updDtText: d('<c:out value="${note.updDtText}"/>'),
+  });
+  </c:forEach>
+
+  if (!rowData.length) return;
+
+  agGrid.createGrid(document.getElementById('noteGrid'), {
+    columnDefs: [
+      { field: 'title', headerName: '제목', flex: 1, minWidth: 200,
+        cellRenderer: p => '<div><div class="fw-semibold text-truncate">' + p.data.title +
+          '</div><div class="text-muted" style="font-size:11px;">최초 작성자 ' + p.data.regId + '</div></div>',
+        autoHeight: true,
+      },
+      { field: 'updId',     headerName: '마지막 수정자', width: 140, minWidth: 100 },
+      { field: 'updDtText', headerName: '수정일',       width: 160, minWidth: 120,
+        cellClass: 'text-muted' },
+    ],
+    rowData,
+    defaultColDef: { sortable: true, resizable: true, suppressMovable: true },
+    domLayout: 'autoHeight',
+    suppressCellFocus: true,
+    rowClass: 'homes-row-click',
+    onRowClicked: p => HOMES.go(ctx + '/note/detail?noteSeq=' + p.data.noteSeq),
+    getRowStyle: () => ({ cursor: 'pointer' }),
+  });
+})();
+</script>
 </body>
 </html>

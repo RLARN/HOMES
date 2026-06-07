@@ -21,10 +21,10 @@
     }
 
     /* ── 명세 테이블 ── */
-    .st { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .st { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 480px; }
     .st th  { background: #f1f5f9; padding: .5rem 1rem; font-weight: 600; color: #64748b;
                border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
-    .st td  { padding: .45rem 1rem; border-bottom: 1px solid #f1f5f9; }
+    .st td  { padding: .45rem 1rem; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
     .st tr:last-child td { border-bottom: none; }
     .st .grp td { background: #f8fafc; font-weight: 600; font-size: 12px;
                   color: #475569; padding: .32rem 1rem; }
@@ -33,6 +33,12 @@
     .st .tot-exp td { background: #fff7ed; border-top: 2px solid #fed7aa; }
     .st .manual-badge { font-size: 10px; background: #dbeafe; color: #1e40af;
                         padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
+    /* 모바일 스크롤 */
+    .stmt-box, .ref-body { overflow-x: auto; }
+    @media (max-width: 767px) {
+      .st { font-size: 12px; }
+      .st th, .st td { padding: .3rem .6rem; }
+    }
 
     /* ── 색상 ── */
     .c-pos  { color: #16a34a; }

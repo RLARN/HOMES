@@ -94,94 +94,20 @@
       <!-- 목록 테이블 -->
       <div class="card homes-card">
         <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table align-middle homes-table mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th style="width:100px;">구분</th>
-                  <th>수지계정명</th>
-                  <th style="width:140px;" class="text-end">금액단위</th>
-                  <th style="width:180px;">수입원 연결</th>
-                  <th style="width:80px;" class="text-center">사용</th>
-                  <th style="width:80px;" class="text-center">사용수</th>
-                  <th style="width:120px;" class="text-center">관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                <c:choose>
-                  <c:when test="${empty ccList}">
-                    <tr>
-                      <td colspan="7" class="text-center text-muted py-5">
-                        등록된 수지계정가 없습니다.<br>
-                        정기지출을 등록하면 자동으로 생성되거나,
-                        [+ 수동 등록] 버튼으로 직접 추가할 수 있습니다.
-                      </td>
-                    </tr>
-                  </c:when>
-                  <c:otherwise>
-                    <c:forEach var="cc" items="${ccList}">
-                      <tr>
-                        <td>
-                          <c:choose>
-                            <c:when test="${cc.ccType == 'AUTO'}">
-                              <span class="badge bg-light text-secondary border" style="font-size:11px;">자동</span>
-                            </c:when>
-                            <c:otherwise>
-                              <span class="badge bg-info-subtle text-info border" style="font-size:11px;">수동</span>
-                            </c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td>
-                          <span class="fw-semibold">${cc.ccNm}</span>
-                          <c:if test="${cc.ccType == 'AUTO'}">
-                            <span class="text-muted small ms-1">(정기지출 연동)</span>
-                          </c:if>
-                        </td>
-                        <td class="text-end">
-                          <fmt:formatNumber value="${cc.monthlyAmt}" pattern="#,##0"/> 원
-                        </td>
-                        <td class="text-muted small">
-                          <c:choose>
-                            <c:when test="${not empty cc.incomePlanNm}">
-                              <span class="badge bg-success-subtle text-success border">${cc.incomePlanNm}</span>
-                            </c:when>
-                            <c:otherwise><span class="text-muted">-</span></c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td class="text-center">
-                          <span class="badge ${cc.useYn == 'Y' ? 'bg-success' : 'bg-secondary'}">
-                            ${cc.useYn == 'Y' ? 'ON' : 'OFF'}
-                          </span>
-                        </td>
-                        <td class="text-center">
-                          <c:choose>
-                            <c:when test="${cc.usedCount > 0}">
-                              <span class="badge bg-warning text-dark">${cc.usedCount}건 사용</span>
-                            </c:when>
-                            <c:otherwise>
-                              <span class="text-muted small">미사용</span>
-                            </c:otherwise>
-                          </c:choose>
-                        </td>
-                        <td class="text-center">
-                          <div class="d-flex gap-1 justify-content-center">
-                            <button class="btn btn-sm btn-outline-secondary homes-pill px-2"
-                                    onclick="openModal(${cc.ccSeq}, '${cc.ccNm}', ${cc.monthlyAmt}, ${empty cc.incomePlanSeq ? 'null' : cc.incomePlanSeq}, '${cc.useYn}', '${cc.memo}')">
-                              수정
-                            </button>
-                            <c:if test="${cc.usedCount == 0}">
-                              <button class="btn btn-sm btn-outline-danger homes-pill px-2"
-                                      onclick="deleteCc(${cc.ccSeq}, '${cc.ccNm}')">삭제</button>
-                            </c:if>
-                          </div>
-                        </td>
-                      </tr>
-                    </c:forEach>
-                  </c:otherwise>
-                </c:choose>
-              </tbody>
-            </table>
-          </div>
+          <c:choose>
+            <c:when test="${empty ccList}">
+              <div class="text-center text-muted py-5">
+                등록된 수지계정가 없습니다.<br>
+                정기지출을 등록하면 자동으로 생성되거나,
+                [+ 수동 등록] 버튼으로 직접 추가할 수 있습니다.
+              </div>
+            </c:when>
+            <c:otherwise>
+              <div class="homes-ag-wrap">
+                <div id="ccGrid" class="ag-theme-alpine"></div>
+              </div>
+            </c:otherwise>
+          </c:choose>
         </div>
       </div>
 
@@ -254,8 +180,84 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const ctx    = '${pageContext.request.contextPath}';
+const ctx     = '${pageContext.request.contextPath}';
 const ccModal = new bootstrap.Modal(document.getElementById('ccModal'));
+
+/* ── CC 목록 데이터 embed ── */
+const ccRowData = [];
+<c:forEach var="cc" items="${ccList}">
+(function(){
+  function d(s){const el=document.createElement('textarea');el.innerHTML=s;return el.value;}
+  ccRowData.push({
+    ccSeq:         ${cc.ccSeq},
+    ccType:        '${cc.ccType}',
+    ccNm:          d('<c:out value="${cc.ccNm}"/>'),
+    monthlyAmt:    ${cc.monthlyAmt},
+    incomePlanSeq: ${empty cc.incomePlanSeq ? 'null' : cc.incomePlanSeq},
+    incomePlanNm:  d('<c:out value="${cc.incomePlanNm}"/>'),
+    useYn:         '${cc.useYn}',
+    usedCount:     ${cc.usedCount},
+    memo:          d('<c:out value="${cc.memo}"/>'),
+  });
+})();
+</c:forEach>
+
+if (ccRowData.length) {
+  agGrid.createGrid(document.getElementById('ccGrid'), {
+    columnDefs: [
+      { field: 'ccType', headerName: '구분', width: 90,
+        cellRenderer: p => p.value === 'AUTO'
+          ? '<span class="badge bg-light text-secondary border" style="font-size:11px;">자동</span>'
+          : '<span class="badge bg-info-subtle text-info border" style="font-size:11px;">수동</span>' },
+      { field: 'ccNm', headerName: '수지계정명', flex: 1, minWidth: 140,
+        cellRenderer: p => {
+          const sub = p.data.ccType === 'AUTO' ? ' <span class="text-muted ms-1" style="font-size:11px;">(정기지출 연동)</span>' : '';
+          return '<span class="fw-semibold">' + p.data.ccNm + '</span>' + sub;
+        }
+      },
+      { field: 'monthlyAmt', headerName: '금액단위', width: 140, type: 'rightAligned',
+        valueFormatter: p => Number(p.value).toLocaleString('ko-KR') + ' 원' },
+      { field: 'incomePlanNm', headerName: '수입원 연결', width: 160,
+        cellRenderer: p => p.value
+          ? '<span class="badge bg-success-subtle text-success border">' + p.value + '</span>'
+          : '<span class="text-muted">-</span>' },
+      { field: 'useYn', headerName: '사용', width: 75,
+        cellStyle: { justifyContent: 'center' },
+        cellRenderer: p => p.value === 'Y'
+          ? '<span class="badge bg-success">ON</span>'
+          : '<span class="badge bg-secondary">OFF</span>' },
+      { field: 'usedCount', headerName: '사용수', width: 85,
+        cellStyle: { justifyContent: 'center' },
+        cellRenderer: p => p.value > 0
+          ? '<span class="badge bg-warning text-dark">' + p.value + '건 사용</span>'
+          : '<span class="text-muted" style="font-size:12px;">미사용</span>' },
+      { headerName: '관리', width: 120, sortable: false,
+        cellStyle: { justifyContent: 'center' },
+        cellRenderer: p => {
+          const el = document.createElement('div');
+          el.className = 'd-flex gap-1 justify-content-center';
+          const editBtn = document.createElement('button');
+          editBtn.className = 'btn btn-sm btn-outline-secondary homes-pill px-2';
+          editBtn.textContent = '수정';
+          editBtn.onclick = () => openModal(p.data.ccSeq, p.data.ccNm, p.data.monthlyAmt, p.data.incomePlanSeq, p.data.useYn, p.data.memo);
+          el.appendChild(editBtn);
+          if (p.data.usedCount === 0) {
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn btn-sm btn-outline-danger homes-pill px-2';
+            delBtn.textContent = '삭제';
+            delBtn.onclick = () => deleteCc(p.data.ccSeq, p.data.ccNm);
+            el.appendChild(delBtn);
+          }
+          return el;
+        }
+      },
+    ],
+    rowData: ccRowData,
+    defaultColDef: { sortable: true, resizable: true, suppressMovable: true },
+    domLayout: 'autoHeight',
+    suppressCellFocus: true,
+  });
+}
 
 function fmtAmt(el) {
   const raw = el.value.replace(/[^0-9]/g, '');
